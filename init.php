@@ -1,0 +1,214 @@
+<?php
+/**
+ * This file is part of doba.
+ *
+ * Licensed under The MIT License
+ * For full copyright and license information, please see the MIT-LICENSE.txt
+ * Redistributions of files must retain the above copyright notice.
+ *
+ * @author    jinhanjiang<jinhanjiang@foxmail.com>
+ * @copyright jinhanjiang<jinhanjiang@foxmail.com>
+ * @license   http://www.opensource.org/licenses/mit-license.php MIT License
+ */
+define('ROOT_PATH', dirname(dirname($_SERVER['SCRIPT_FILENAME'])).'/');
+// The main role of the current file is to quickly generate the framework and some configurations.
+try{
+    switch($_REQUEST['a'])
+    {
+        case 'init': // Initialize the project structure
+            if(! is_dir(ROOT_PATH.'common')) {
+                copydirRecurse(ROOT_PATH.'doba/struct', ROOT_PATH);
+                echo 'ok';
+            } else {
+                echo 'Project structure may already exist';
+            }
+            break;
+
+        default: // Refresh table structure
+            $configFile = ROOT_PATH.'common/config/config.php';
+            if(! is_file($configFile)) {
+                echo 'Please perform the initialization framework first.'; exit;
+            }
+            require($configFile);
+            if(defined('MYSQL_CONFIGS')) {
+                $dbConfigs = json_decode(MYSQL_CONFIGS, true);
+                if(isset($dbConfigs['default'])) {
+                    initDaoMap('', $dbConfigs['default']);
+                }
+                else
+                {
+                    foreach($dbConfigs as $project=>$dbConfig) {
+                        initDaoMap($project, $dbConfig);
+                    }
+                }
+                echo 'Refresh the table structure successfully';
+            } else {
+                echo 'Database link not found';
+            }
+            break;
+    }
+} catch(Exception $ex) {
+    echo $ex->getMessage();
+}
+/**
+ * Bulk copy directory (including all files in subdirectories)
+ */
+function copydirRecurse($source, $destination, $child=true) 
+{
+    if(! is_dir($source)){ 
+        echo("Error:the $source is not a direction!");  return false; 
+    } 
+    if(! is_dir($destination))  mkdir($destination, 0777);  
+    $handle = dir($source); 
+    while($entry = $handle->read()) 
+    { 
+        if(($entry != ".")&&($entry != ".."))
+        {
+            if(is_dir($source."/".$entry)) {
+                if($child) copydirRecurse($source."/".$entry, $destination."/".$entry,$child); 
+            }  else {
+                if(! is_file($destination."/".$entry)) { 
+                    copy($source."/".$entry, $destination."/".$entry); 
+                }
+            } 
+        } 
+    } 
+    return true; 
+}
+/**
+ * Initialize Dao and Map
+ */
+function initDaoMap($project, $dbConfig)
+{
+    $project = strtolower($project);
+
+    $daoNamespace = 'Doba\Dao';
+    $mapNamespace = 'Doba\Map';
+    $daoPath = ROOT_PATH."common/libs/dao/";
+    $mapPath = ROOT_PATH."common/libs/map/";
+    if($project) {
+        $daoNamespace = "Doba\Dao\\".ucfirst($project);
+        $mapNamespace = "Doba\Map\\".ucfirst($project);
+        $daoPath = ROOT_PATH."common/libs/dao/{$project}/";
+        $mapPath = ROOT_PATH."common/libs/map/{$project}/";    
+    }
+    $db = new \Doba\SQL(array('db'=>'mysql') + $dbConfig);
+    $datas = $db->query('SHOW TABLES'); $tables = array();
+    for($i = 0, $ct = count($datas); $i < $ct; $i ++)
+    {
+        $tableName = current($datas[$i]);
+        if(preg_match('/_\d+$/', $tableName)) continue;
+        $tables[] = $tableName;
+        
+    }
+    initDao($project ? $project : 'default', 
+        $daoPath, $daoNamespace, $mapNamespace, $tables);
+    initMap($db, $mapPath, $mapNamespace, $tables);
+}
+function initDao($project, $path, $daoNamespace, $mapNamespace, $tables)
+{
+    $template = <<<TP
+<?php
+namespace {{ @dao namespace }};
+
+use Doba\BaseDAO;
+
+class {{ @class name }}DAO extends BaseDAO {
+
+    protected function __construct() {
+        parent::__construct('{{ @class name }}', 
+            array(
+                'link'=>'{{ @project }}',
+                'tbpk'=>\{{ @map namespace}}\{{ @class name }}::getTablePk(),
+                'tbinfo'=>\{{ @map namespace}}\{{ @class name }}::getTableInfo(),
+            )
+        ); 
+    }
+}
+TP;
+    // Generate Dao files
+    foreach($tables as $table) 
+    {
+        \Doba\Util::mkdir($path);
+        if(! is_file($daofile = $path.$table.'DAO.php')) 
+        {
+            $GLOBALS['variables'] = array(
+                'dao namespace'=>$daoNamespace,
+                'map namespace'=>$mapNamespace,
+                'class name'=>$table,
+                'project'=>$project,
+            );
+            preg_match_all("/{{\s*@(.[^}]+)}}/", $template, $out);
+            $toArray = array_map(function($text){
+                $text = trim($text);
+                return isset($GLOBALS['variables'][$text]) ? $GLOBALS['variables'][$text] : $text;
+            }, $out[1]);
+            file_put_contents($daofile, str_replace($out[0], $toArray, $template));
+        }
+    }
+}
+function initMap($db, $path, $mapNamespace, $tables)
+{
+    $template = <<<TP
+<?php
+namespace {{ @map namespace }};
+
+class {{ @class name }} {
+
+    public static function getTablePk() {
+        return '{{ @table pk }}';
+    }
+
+    public static function getTableInfo() {
+        return array(
+            {{ @table info }}
+        );
+    }
+
+    public static function getSQL() {
+        \$sql = <<<SQL
+        {{ @create sql }}
+SQL;
+        return \$sql;
+    }
+}
+TP;
+
+    foreach($tables as $table)
+    {
+        \Doba\Util::mkdir($path);
+
+        $tableInfo = ""; $tbpk = "";
+        $results = $db->query("DESC `{$table}`");
+        if(is_array($results)) foreach($results as $i=>$result) {
+            if(preg_match('/int/i', $result->type)) $type = 'int';  
+            else if(preg_match('/(float|double|decimal)/i', $result->type)) $type = 'float';
+            else $type = 'string';
+            $pk = ('PRI' == strtoupper($result->Key)) ? 1 : 0;
+            $notnull = 'NO' == strtoupper($result->Null) ? 1 : 0;
+            $autoincremnt = ('AUTO_INCREMENT' == strtoupper($result->Extra)) ? 1 : 0;
+
+            $tableInfo .= ($i>0?"\n\t\t\t":"")."array('field'=>'{$result->Field}', 'type'=>'{$type}', 'notnull'=>{$notnull}, 'default'=>'{$result->Default}', 'pk'=>{$pk}, 'autoincremnt'=>{$autoincremnt}),";
+            if($pk) $tbpk = $result->Field;
+        }
+
+        $results = $db->query("SHOW CREATE TABLE `{$table}`");
+        $results = array_values((array)$results[0]);
+
+        $mapfile = $path.$table.'.php';
+
+        $GLOBALS['variables'] = array(
+            'map namespace'=>$mapNamespace,
+            'class name'=>$table,
+            'table pk'=>$tbpk,
+            'table info'=>$tableInfo,
+            'create sql'=>preg_replace('/AUTO_INCREMENT=\d+\s*/i', '', $results[1]),
+        );
+        preg_match_all("/{{\s*@(.[^}]+)}}/", $template, $out);
+        $toArray = array_map(function($text){
+            $text = trim($text);
+            return isset($GLOBALS['variables'][$text]) ? $GLOBALS['variables'][$text] : $text;
+        }, $out[1]);
+        file_put_contents($mapfile, str_replace($out[0], $toArray, $template));
+    }
+}

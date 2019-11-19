@@ -1,0 +1,255 @@
+<?php
+/**
+ * This file is part of doba.
+ *
+ * Licensed under The MIT License
+ * For full copyright and license information, please see the MIT-LICENSE.txt
+ * Redistributions of files must retain the above copyright notice.
+ *
+ * @author    jinhanjiang<jinhanjiang@foxmail.com>
+ * @copyright jinhanjiang<jinhanjiang@foxmail.com>
+ * @license   http://www.opensource.org/licenses/mit-license.php MIT License
+ */
+namespace Doba;
+
+class BaseDAO {
+    private static $instance = array();
+    protected $db = NULL;
+    protected $tbname;
+    protected $originaltbname;
+    protected $tbinfo = array();
+    private $tbpk = 'id';
+
+    protected function __construct($tbname, $options=array())  {
+        $link = isset($options['link']) && $options['link'] ? $options['link'] : 'default';
+        $tbpk = isset($options['tbpk']) && $options['tbpk'] ? $options['tbpk'] : 'id';
+        $tbinfo = isset($options['tbinfo']) && $options['tbinfo'] ? $options['tbinfo'] : $this->getTableInfo();
+        $this->db = \Config::getDb($link);
+        $this->tbname = $tbname;
+        $this->originaltbname = $tbname;
+        $this->tbpk = $tbpk;
+        $this->tbinfo = $tbinfo;
+    }
+
+    public static function me(){
+        $class = get_called_class();
+        if(! self::$instance[$class]) {
+            self::$instance[$class] = new $class();
+        }
+        return self::$instance[$class];
+    }
+
+    public function getdb() { return $this->db; }
+    public function setdb($db=NULL) { 
+        $this->db = $db; return $this; 
+    }
+
+    public function table($table) {
+        echo $table;
+        $this->tbname = preg_match('/^\d+$/', $table) ? $this->originaltbname.'_'.$table : $table;
+        return $this;
+    }
+
+    public function query($sql) {
+        $result = $this->db->query($sql);
+        $this->tbname = $this->originaltbname;
+        return $result;
+    }
+
+    /**
+     * get table field name
+     */
+    public function getTableInfo() {
+        $fields = array();
+        if('sqlite' == $this->db->dbname) {
+            $results = $this->db->query("PRAGMA TABLE_INFO(`{$this->tbname}`)");
+            if(is_array($results)) foreach($results as $result) {  
+                if(preg_match('/^int/i', $result->type)) $type = 'int';  
+                else if('REAL' == strtoupper($result->type)) $type = 'float';
+                else $type = 'string';
+                $fields[] = array(
+                    'field'=>$result->name,
+                    'type'=>$type,
+                    'notnull'=>$result->notnull ? true : false,
+                    'default'=>$result->dflt_value,
+                    'pk'=>$result->pk,
+                    'autoincremnt'=>$result->pk,
+                );
+                if($result->pk) $this->tbpk = $result->name;
+            }
+        } else if('mysql' == $this->db->dbname) {
+            $results = $this->db->query("DESC `{$this->tbname}`");
+            if(is_array($results)) foreach($results as $result) {
+                if(preg_match('/int/i', $result->type)) $type = 'int';  
+                else if(preg_match('/(float|double|decimal)/i', $result->type)) $type = 'float';
+                else $type = 'string';
+                $pk = ('PRI' == strtoupper($result->Key)) ? true : false;
+                $fields[] = array(
+                    'field'=>$result->Field,
+                    'type'=>$type,
+                    'notnull'=>'NO' == strtoupper($result->Null) ? true : false,
+                    'default'=>$result->Default,
+                    'pk'=>$pk,
+                    'autoincremnt'=>('AUTO_INCREMENT' == strtoupper($result->Extra)) ? true : false,
+                );
+                if($pk) $this->tbpk = $result->Field;
+            }
+        }
+        return $fields;
+    }
+
+    /**
+     * log
+     * @param  array $params ， not contins (pid, dateCode, timeCreated)
+     * @return [type]         [description]
+     */
+    public function insert($params) 
+    {
+        $fieldstr = $valuestr = ""; $k=0;
+        foreach($this->tbinfo as $tbinfo) {
+            if($tbinfo['autoincremnt']) continue;
+            $value = $tbinfo['default'];
+            if(isset($params[$tbinfo['field']])) {
+                $value = $this->escape($params[$tbinfo['field']]);
+                settype($value, $tbinfo['type']);
+            }
+            $valuestr .= ($k > 0 ? ',' : '');
+            if(is_null($value)) $valuestr .= 'NULL'; 
+            else if(is_numeric($value)) $valuestr .= $value;
+            else $valuestr .= "'".$value."'";
+            $fieldstr .= ($k > 0 ? ',' : '').'`'.$tbinfo['field'].'`';
+            $k ++;
+        }
+        $field = "(".$fieldstr.")"; $value = "(".$valuestr.")";
+        return $this->query("INSERT INTO `{$this->tbname}` {$field} VALUES {$value}");
+    }
+
+    /**
+     * log
+     * @param  array $params
+     * @return [type]         [description]
+     */
+    public function change($pk=0, $params) 
+    {   
+        $data = array(); $columns = array_column($this->tbinfo, 'field');
+        foreach($params as $field=>$value) {
+            if(! in_array($field, $columns)) continue;
+            $data[] = "`{$field}`='".$this->escape($value)."'";
+        }
+        $setConds = implode(',', $data);
+        $this->query("UPDATE `{$this->tbname}` SET {$setConds} WHERE `{$this->tbpk}`='{$pk}'");
+        return $pk;
+    }
+
+    /**
+     * Get a record through the id
+     */
+    public function get($id=0) 
+    {
+        $datas = empty($id) ? array() : $this->finds(array($this->tbpk=>$id, 'limit'=>1));
+        return isset($datas[0]) ? (object)$datas[0] : NULL;
+    }
+
+    /**
+     * Delete record through the id
+     */
+    public function delete($id=0) 
+    {
+        $this->query("DELETE FROM `{$this->tbname}` WHERE `{$this->tbpk}`='{$id}'");
+    }
+
+    /**
+     * To get the results
+     * @param  array $params array('dateCode', 'dateCodeGeq', 'dateCodeLeq', 'pid', 'username')
+     * @return [type]         [description]
+     */
+    public function finds($params) 
+    {
+        $groupByStr = '';
+        if(! empty($params['groupBy'])) {
+            $groupByStr = "GROUP BY {$params['groupBy']}";
+        }
+        $orderByStr = '';
+        if(! empty($params['orderBy'])) {
+            $orderByStr = "ORDER BY {$params['orderBy']}";
+        }
+        $limitStr = '';
+        if(! empty($params['limit'])) {
+            $limitStr = "LIMIT {$params['limit']}";
+        }
+        $selectCase = $params['selectCase'] ? $params['selectCase'] : '*';
+
+        $sql = "SELECT {$selectCase} FROM `{$this->tbname}` WHERE 1=1"; $newSql = '';
+        $fields = array_column($this->tbinfo, 'field');
+        foreach($fields as $field) 
+        {
+            if(isset($params[$field]) && '' !== $params[$field]) {
+                $value = $params[$field];
+                if(is_array($value))
+                {
+                    // array('and'=>false, 'op'=>'=', 'value'=>'')
+                    // op: [eq =], [geq, >=], [leq, <=], in, not in ,like, [custom]
+                    $value = $value['value']; $vescape = false;
+                    $and = isset($value['and']) && false === $value['and'] ? 'OR' : 'AND';
+                    $op = strtolower($value['op']);
+                    if('>=' == $op || 'geq'== $op) { 
+                        $op = '>='; $vescape = true; 
+                    } else if('<=' == $op || 'leq'== $op) {
+                        $op = '<='; $vescape = true; 
+                    } else if('in' == $op) $op = 'IN';
+                    else if('like' == $op) $op = 'LIKE';
+                    else if('custom' == $op) {
+                        $op = ''; $value = "({$value})";
+                    } else {
+                        $op = '='; $vescape = true; 
+                    }
+                    if($vescape) $value = "'".$this->escape($value)."'"; 
+                    $sql .= " {$and} `{$field}`{$op}{$value}";
+                }
+                else {
+                    $sql .= " AND `{$field}`='".$this->escape($params[$field])."'";
+                }
+            } if(isset($params[$field.'Like']) && '' !== $params[$field.'Like']) {
+                $sql .= " AND `{$field}` LIKE '%".$this->escape($params[$field.'Like'])."%'";
+            } if(isset($params[$field.'Geq']) && '' !== $params[$field.'Geq']) {
+                $sql .= " AND `{$field}`>='".$this->escape($params[$field.'Geq'])."'";
+            } if(isset($params[$field.'Gt']) && '' !== $params[$field.'Gt']) {
+                $sql .= " AND `{$field}`>'".$this->escape($params[$field.'Gt'])."'";
+            } if(isset($params[$field.'Leq']) && '' !== $params[$field.'Leq']) {
+                $sql .= " AND `{$field}`<='".$this->escape($params[$field.'Leq'])."'";
+            } if(isset($params[$field.'Lt']) && '' !== $params[$field.'Lt']) {
+                $sql .= " AND `{$field}`<'".$this->escape($params[$field.'Lt'])."'";
+            } if(isset($params[$field.'Neq']) && '' !== $params[$field.'Neq']) {
+                $sql .= " AND `{$field}`!='".$this->escape($params[$field.'Neq'])."'";
+            }
+        }
+        $sqlWithOutLimit = $sql." {$groupByStr} {$orderByStr}";
+        $sql .= " {$groupByStr} {$orderByStr} {$limitStr}";
+        
+        return $this->query($sql);
+    }
+
+    public function findCount($params)
+    {
+        unset($params['limit'], $params['orderBy']);
+
+        $groupByStr = '';
+        if(! empty($params['groupBy'])) {
+            $groupByStr = "GROUP BY {$params['groupBy']}";
+        }
+        $firstField = false !== ($pos = stripos($groupBy, ',')) ? trim(substr($groupBy, 0, $pos)) : $groupBy;
+        $params['selectCase'] = empty($groupBy) ? 'COUNT(*) AS `cnt`' : 'COUNT(DISTINCT '.$firstField.') AS `cnt`';
+        
+        $objs = $this->finds($params);
+        return isset($objs[0]) ? $objs[0]->cnt : 0;
+    }
+
+    protected function formatSQL($sql) {
+        return trim(preg_replace(array("/\n/", "/\s+/"), " ", $sql));
+    }
+
+    public function escape($value) {
+        return is_null($value) ? NULL : (is_numeric($value) ? $value : str_replace(array("'"), array("''"), $value));
+    }
+
+}
