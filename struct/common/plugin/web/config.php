@@ -130,7 +130,7 @@ class WebPlugin extends BasePlugin {
         
         // control language
         $action = self::getAction($_REQUEST);
-        $controlLang = Util::isFile($langfile = __DIR__.'/lang/'.$action['control'].'/'.$lang.'.php') ? require_once($langfile) : array();
+        $controlLang = Util::isFile($langfile = LANGUAGE_PATH.$action['control'].'/'.$lang.'.php') ? require_once($langfile) : array();
 
         $GLOBALS['I18N_LANGS'] = $controlLang + $i18nlangs + $commonLangs;
 

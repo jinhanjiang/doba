@@ -1,4 +1,6 @@
 <?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET,POST");
 require(__DIR__.'/common/config/config.php');
 
 $GLOBALS['plugin']->call('web', 'initPath');

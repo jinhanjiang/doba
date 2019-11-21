@@ -11,13 +11,12 @@ class RpcPlugin extends BasePlugin {
 
     public function response()
     {
-        global $API_CALL_CONFIG;
-        
+        global $API_CALL_CONFIG, $ALLOW_ANONYMOUS_CALL_API;
         try{
             $_TEMP_FILES = array(); $contentJson = ''; $httpHeaders = $this->getHttpHeaders();
-            $ALLOW_ANONYMOUS_CALL_API = array(
-                // The API that does not require authentication permissions is written here
-            );
+            $API_CALL_CONFIG = is_array($API_CALL_CONFIG) ? $API_CALL_CONFIG : array();
+            // The API that does not require authentication permissions is written in the following array
+            $ALLOW_ANONYMOUS_CALL_API = is_array($ALLOW_ANONYMOUS_CALL_API) ? $ALLOW_ANONYMOUS_CALL_API : array();
             // ---------------------- 一 Receiving request -----------------------------------------------
             // json request
             if(preg_match('/^application\/json/i', $_SERVER['CONTENT_TYPE'])) {
@@ -26,7 +25,10 @@ class RpcPlugin extends BasePlugin {
                 $_REQUEST_DATA = $_FILTER['edatas'];
             } 
             // Upload file request
-            else if(preg_match('/^multipart\/form\-data/i', $_SERVER['CONTENT_TYPE'])) 
+            else if(
+                preg_match('/^multipart\/form\-data/i', $_SERVER['CONTENT_TYPE']) ||
+                preg_match('/^application\/x\-www\-form\-urlencoded/i', $_SERVER['CONTENT_TYPE'])
+            ) 
             {
                 // 1 Encapsulate post request
                 $_FILTER = $_POST;
@@ -100,13 +102,6 @@ class RpcPlugin extends BasePlugin {
         } catch(\Exception $ex) {
             $this->ccc($_TEMP_FILES); Util::echoJson(array('ErrorCode' => strval($ex->getCode()), 'Message'=>$ex->getMessage()));
         }
-    }
-
-    /**
-     * Determine whether it is an ajax request
-     */
-    private function isAjax() {
-        return 'XMLHttpRequest' == @$_SERVER['HTTP_X_REQUESTED_WITH'];
     }
     /**
      * Methods are called before data is returned to the client

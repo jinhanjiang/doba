@@ -38,7 +38,8 @@ class DefaultController extends BaseController
     }
 
     public function login() {
-        $this->assign();
+        $data['hi'] = langi18n('Hello World');
+        $this->assign($data);
     }
 
     public function doLogin()
@@ -54,6 +55,12 @@ class DefaultController extends BaseController
     public function logout() {
         Session::me()->clear(); 
         forward('login');
+    }
+
+    public function lang() {
+        $lang = in_array($_GET['l'], array('en', 'zh')) ? $_GET['l'] : 'en';// en, zh, ...， You must set it in the lang directory
+        \Doba\Cookie::me()->key('MULTI_LANGUAGE')->set('MULTI_LANGUAGE_TYPE', $lang, 86400*365);
+        $this->json();
     }
 
 }

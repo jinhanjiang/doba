@@ -24,7 +24,7 @@ class BaseDAO {
         $link = isset($options['link']) && $options['link'] ? $options['link'] : 'default';
         $tbpk = isset($options['tbpk']) && $options['tbpk'] ? $options['tbpk'] : 'id';
         $tbinfo = isset($options['tbinfo']) && $options['tbinfo'] ? $options['tbinfo'] : $this->getTableInfo();
-        $this->db = \Config::getDb($link);
+        $this->db = \Config::me()->getDb($link);
         $this->tbname = $tbname;
         $this->originaltbname = $tbname;
         $this->tbpk = $tbpk;

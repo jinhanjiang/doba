@@ -14,8 +14,21 @@ namespace Doba;
 
 class BaseConfig
 {
+    private static $instance = array();
+    protected $dbConfigs = array();
+    protected $redisConfigs = array();
+    
+    protected function __construct() {}
+    public static function me(){
+        $class = get_called_class();
+        if(! self::$instance[$class]) {
+            self::$instance[$class] = new $class();
+        }
+        return self::$instance[$class];
+    }
+
     // recode system log
-    public static function recordSysLog($code, $message, $file, $line, $from) 
+    public function recordSysLog($code, $message, $file, $line, $from) 
     {
         if(defined('TEMP_PATH') && defined('DEBUG_ERROR')) 
         {
@@ -54,38 +67,70 @@ class BaseConfig
         }   
     }
 
-    public static function errorFunction($errno, $errstr, $errfile, $errline, $errcontext) {
-        self::recordSysLog($errno, $errstr, $errfile, $errline, 0);
-    }
-
-    public static function shutdownFunction() {
+    public function shutdownFunction() {
         $e = error_get_last();
-        self::recordSysLog($e['type'], $e['message'], $e['file'], $e['line'], 1);
+        $this->recordSysLog($e['type'], $e['message'], $e['file'], $e['line'], 1);
     }
     
-    // Write some custom methods
-    public static function getRedisConfig($key='default') {
-        $redisConfig = array('ip'=>'127.0.0.1', 'port'=>'6379', 'pass'=>'');
-        if(defined('REDIS_CONFIGS')) {
-            $redisConfigs = json_decode(REDIS_CONFIGS, true);
-            if(isset($redisConfigs[$key])) $redisConfig = $redisConfigs[$key];
-        }
+    public function getRedisConfig($key='default') {
+        $redisConfig = isset($this->redisConfigs[$key]) ? $this->redisConfigs[$key] : array();
+        if(! $redisConfig) throw new Exception('['.$key.'] redis connection configuration not found');
         return $redisConfig;
     }
 
-    public static function getDb($key='default') {
-        if(! $GLOBALS[$key.'db']) {  
-            $dbConfig = array('dbHost'=>'127.0.0.1', 'dbName'=>'root', 'dbPass'=>'');
-            if(defined('MYSQL_CONFIGS')) {
-                $dbConfigs = json_decode(MYSQL_CONFIGS, true);
-                if(isset($dbConfigs[$key])) $dbConfig = $dbConfigs[$key];
-            }
-            $GLOBALS[$key.'db'] = new \Doba\SQL(array('db'=>'mysql') + $dbConfig);
+    public function setRedisConfigs() {
+        if(defined('REDIS_CONFIGS')) {
+            $this->redisConfigs = json_decode(REDIS_CONFIGS, true);
+        } else {
+            $this->redisConfigs = array('default'=>array('host'=>'127.0.0.1', 'port'=>'6379', 'pass'=>'', 'persistent'=>false));
+        }
+    }
+
+    public function getDb($key='default') {
+        if(! $GLOBALS[$key.'db']) {
+            $dbConfigs = $this->getDbConfigs();
+            $dbConfig = isset($dbConfigs[$key]) ? $dbConfigs[$key] : array();
+            if(! $dbConfig) throw new Exception('['.$key.'] database connection configuration not found');
+            $GLOBALS[$key.'db'] = new \Doba\SQL($dbConfig);
         }
         return $GLOBALS[$key.'db'];
     }
 
-    public static function apiCall($api, $edatas=array(), $options=array())
+    // Database link not set, default is mysql
+    public function getDbConfigs() {
+        if(! $this->dbConfigs) $this->setDbConfigs();
+        if(is_array($this->dbConfigs)) foreach($this->dbConfigs as $key=>$dbConfig) {
+            $this->dbConfigs[$key] = $dbConfig + array('db'=>'mysql');
+        }
+        return $this->dbConfigs;
+    }
+
+    public function setDbConfigs() {
+        if(defined('DB_CONFIGS')) {
+            $this->dbConfigs = json_decode(DB_CONFIGS, true);
+        } else {
+            $this->dbConfigs = array('default'=>array('dbHost'=>'127.0.0.1', 'dbName'=>'test', 'dbUser'=>'root', 'dbPass'=>''));
+        }
+    }
+
+    // configuration when initializing dao and map
+    public function initDaoMapConfig() {
+        return array(
+            // Tables ignored when generating tables dao and map
+            'IGNORED_TABLES'=>array('/^\w+_\d+$/i', '/^\w+\d+$/i')
+        );
+    }
+
+    // Determine whether the development environment
+    public function isDevEnvironment()
+    {
+        $clientIp = \Doba\Util::getIP();
+        return ((defined('SANDBOX') && SANDBOX) || 
+                preg_match('/^192\.168/', $clientIp) || 
+                preg_match('/^127\.0/', $clientIp)) ? true : false;
+    }
+
+    public function apiCall($api, $edatas=array(), $options=array())
     {
         $content = json_encode(
             array(
@@ -129,13 +174,13 @@ class BaseConfig
         return $result;
     }
 
-    public static function url($a, $plus="") {
+    public function url($a, $plus="") {
         $plus = is_array($plus) ? http_build_query($plus) : $plus;
         return URL.'?a='.$a.($plus ? "&".preg_replace('/^[?|&]/', '', $plus) : '');
     }
 
-    public static function forward($a, $plus="") {
-        header("location:".url($a, $plus)); exit;
+    public function forward($a, $plus="") {
+        header("location:".$this->url($a, $plus)); exit;
     }
     /**
      * Multilanguage translation
@@ -169,18 +214,18 @@ class BaseConfig
         function echo(s) { document.write(s); }
         </script>
      */
-    public static function langi18n($text)
+    public function langi18n($text, $args=array())
     {
         $text = trim($text);
         $text = isset($GLOBALS['I18N_LANGS'][$text]) ? $GLOBALS['I18N_LANGS'][$text] : $text;
 
         // if there is a string include %1, %2 ... to replace real value
-        preg_match_all('/(\d)/', $text, $out); $args = func_get_args();
+        preg_match_all('/(\d)/', $text, $out); //$args = func_get_args();
         if(isset($out[1]) && count($args) > 0) 
         {
             $keys = $vals = array();
-            foreach (func_get_args() as $num=>$arg) { 
-                if(0 == $num) continue;  
+            foreach ($args as $num=>$arg) { 
+                $num ++;
                 if(in_array($num, $out[1])) {
                     $keys[] = '%'.$num; $vals[] = $arg;
                 } 
@@ -193,7 +238,7 @@ class BaseConfig
     /**
      * Generate mulitilanguage template
      */
-    public static function genI18nPage($page)
+    public function genI18nPage($page)
     {
         $cachePage = CACHE_PATH.'page/'.basename(WEB_PATH).'/'.LANGUAGE.'/'.$page;
         if( 

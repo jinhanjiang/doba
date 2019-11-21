@@ -16,20 +16,25 @@ define('LEGAL_PAGE', 1);
 (! defined('PLUGIN_PATH')) && define('PLUGIN_PATH', ROOT_PATH.'common/plugin');
 (! defined('DEBUG_ERROR')) && define('DEBUG_ERROR', 'error');
 
-error_reporting(0);
-set_error_handler(array('Config', 'errorFunction'));
-register_shutdown_function(array('Config', 'shutdownFunction'));
 if(! function_exists('url')) {
-    function url($a, $plus="") { return Config::url($a, $plus); }
+    function url($a, $plus="") { return \Config::me()->url($a, $plus); }
 }
 if(! function_exists('forward')) {
-    function forward($a, $plus="") { return Config::forward($a, $plus); }
+    function forward($a, $plus="") { return \Config::me()->forward($a, $plus); }
 }
 if(! function_exists('langi18n')) {
-    function langi18n($text) { return Config::langi18n($text); }
+    function langi18n($text, ...$args) { return \Config::me()->langi18n($text, $args); }
 }
 if(! function_exists('genI18nPage')) {
-    function genI18nPage($page) { return Config::genI18nPage($page); }
+    function genI18nPage($page) { return \Config::me()->genI18nPage($page); }
 }
+if(! function_exists('errorFunction')) {
+    function errorFunction($errno, $errstr, $errfile, $errline, $errcontext) { 
+        \Config::me()->recordSysLog($errno, $errstr, $errfile, $errline, 0);
+    }
+}
+error_reporting(0);
+set_error_handler('errorFunction');
+register_shutdown_function(function() {\Config::me()->shutdownFunction();});
 // load plugins
 $GLOBALS['plugin'] = new \Doba\Plugin(ROOT_PATH.'common/plugin');

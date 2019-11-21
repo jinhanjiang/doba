@@ -30,21 +30,21 @@ try{
                 echo 'Please perform the initialization framework first.'; exit;
             }
             require($configFile);
-            if(defined('MYSQL_CONFIGS')) {
-                $dbConfigs = json_decode(MYSQL_CONFIGS, true);
-                if(isset($dbConfigs['default'])) {
-                    initDaoMap('', $dbConfigs['default']);
-                }
-                else
-                {
-                    foreach($dbConfigs as $project=>$dbConfig) {
-                        initDaoMap($project, $dbConfig);
-                    }
-                }
-                echo 'Refresh the table structure successfully';
-            } else {
-                echo 'Database link not found';
+            if(! \Config::me()->isDevEnvironment()) {
+                echo 'Current operations can only be performed in a development environment'; exit;
             }
+            $dbConfigs = \Config::me()->getDbConfigs(); $dbcnt = 0;
+            if(isset($dbConfigs['default']) && 'mysql' == $dbConfigs['default']['db']) {
+                initDaoMap('', $dbConfigs['default']); $dbcnt ++;
+            }
+            else
+            {
+                foreach($dbConfigs as $project=>$dbConfig) {
+                    if('mysql' != $dbConfig['db']) continue;
+                    initDaoMap($project, $dbConfig); $dbcnt ++;
+                }
+            }
+            echo $dbcnt > 0 ? 'Refresh the table structure successfully' : 'Did not find mysql database connection';
             break;
     }
 } catch(Exception $ex) {
@@ -94,12 +94,17 @@ function initDaoMap($project, $dbConfig)
     }
     $db = new \Doba\SQL(array('db'=>'mysql') + $dbConfig);
     $datas = $db->query('SHOW TABLES'); $tables = array();
+    $initConfig = \Config::me()->initDaoMapConfig();
     for($i = 0, $ct = count($datas); $i < $ct; $i ++)
     {
-        $tableName = current($datas[$i]);
-        if(preg_match('/_\d+$/', $tableName)) continue;
-        $tables[] = $tableName;
-        
+        $tableName = current($datas[$i]); $invalidTablename = false;
+        if(is_array($initConfig['IGNORED_TABLES'])) 
+            foreach($initConfig['IGNORED_TABLES'] as $regular) {
+            if(preg_match($regular, $tableName)) {
+                $invalidTablename = true; break;
+            }
+        }
+        if(! $invalidTablename) $tables[] = $tableName;
     }
     initDao($project ? $project : 'default', 
         $daoPath, $daoNamespace, $mapNamespace, $tables);

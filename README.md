@@ -1,7 +1,7 @@
 
 # 一 框架结构
 
-## 1 doba框架结构
+### 1 doba框架结构
 ```
 |-core
 |   |-AutoTask.php
@@ -24,7 +24,7 @@
 ```
 
 
-## 2 项目结构（骨架）
+### 2 项目结构（骨架）
 ```
 |-autotask
 |-cache
@@ -77,23 +77,24 @@
 |-index.php
 ```
 
-## 3 自动加载类映射
+### 3 自动加载类映射
+
 引用对象的时候，根据包名区分
 ```
 \Doba    => [项目]/doba/core/
 \Doba\Dao\db1    => [项目]/common/libs/dao/db1/
-\Doba\Map\db1    => [项目]/common/libs/map/db1/
+\Doba\Map\db2    => [项目]/common/libs/map/db2/
 \Doba\rpc   => [项目]/common/rpc/
 ```
 
 # 二 快速构建项目
 
-## 1 引入Doba框架
+### 1 引入Doba框架
 ```
-git clone http://github.com/jinhanjiang/doba
+git clone https://github.com/jinhanjiang/doba
 ```
 
-## 2 生成项目开发骨架
+### 2 生成项目开发骨架
 
 配置访问站点
 
@@ -112,15 +113,18 @@ http://blog.xxx.com/doba/init.php?a=init
 执行以上步骤后。生成项目结构
 
 
-## 3 配置数据库链接
+# 三 配置多数据库链接
 
 Doba框架支持多个数据库链接， 并快速生成DAO操作表结构
 
-1 在/data0/website/blog/common/config/下, 创建varconfig.php
+### 1 在/data0/website/blog/common/config/下, 创建varconfig.php
+
+`当用开发环境，和正式环境区分时，使用常量配置，可解决不同环境配置不同的问题`
+
 
 ```
 <?php
-define('MYSQL_CONFIGS', 
+define('DB_CONFIGS', 
     json_encode(
         array(
             'db1'=>array(
@@ -140,6 +144,9 @@ define('MYSQL_CONFIGS',
 );
 ```
 
+### 2 或者在/data0/website/blog/common/config/config.php中配置
+
+
 `注意：这里配置了两个数据库链接， 这里的db1, db2要注意，会生成的表命名空间`
 
 例如：
@@ -147,20 +154,52 @@ define('MYSQL_CONFIGS',
 ```
 # db1下面有一张Account表，在实例化对象的时, 其中的`\Db1`, 是上面配置中的db1设置
 
-$account = new \Doba\Dao\Db1\AccountDAO::me()->finds(array('selectCase'=>'*', 'limit'=>1));
+$account1 = \Doba\Dao\Db1\AccountDAO::me()->finds(array('selectCase'=>'*', 'limit'=>1));
 
+# db2下面Account表
+$account2 = \Doba\Dao\Db2\AccountDAO::me()->finds(array('selectCase'=>'*', 'limit'=>1));
 ```
 
-2 创建好数据库链接后。生成DAO及MAP数据库表映射
+### 3 创建好数据库链接后。生成DAO及MAP数据库表映射
 
+```
+问:为什么生成DAO和MAP
+答:生成DAO文件，可支持对表数据的，增(insert)，删(delete)，查(finds, get)，改(change)操作, 生成MAP是生成数库表的字段映射，生成insert, update, select的sql语句时，可对传入的表字段进行验证
+```
+
+生成表映射的时候，如果分多张表，有些表不生成映射可设置规则，默认以 下划线数字(例如_0)， 或 数字结尾的表，不生成映射
+
+如果要修改规则，可在/data0/website/blog/common/config/config.php中设置
+
+```
+# 设置以_test的表不生成DAO和MAP
+class Config extends \Doba\BaseConfig {
+    ...
+
+    public static function initDaoMapConfig() {
+        $initDaoMapConfig = parent::initDaoMapConfig();
+        return array(
+            'IGNORED_TABLES'=>array('/^\w+_\d+$/i', '/^\w+\d+$/i', '/_test$/i')
+            ) + $initDaoMapConfig;
+    }
+
+    ...
+}
+```
+
+`在Config类中可重写父类的方法，用于更改底层配置`
+
+### 4 执行刷新表结构操作
+
+`每次执行，如果DAO存在不会覆盖，MAP文件每次会覆盖为最新结构`
 ```
 # 访问地址
 http://blog.xxx.com/doba/init.php
 ```
 
-# 三 项目开发
+# 四 项目开发
 
-1 默认请求到index.php这个文件中, 经过判断后， 请求最后交给到
+### 1 默认请求到index.php这个文件中, 经过判断后， 请求最后交给到
 ```
 访问:
 http://blog.xxx.com
@@ -171,15 +210,262 @@ http://blog.xxx.com
 其中的DefaultController.index方法处理
 ```
 
-2 通过URL定位页面
+### 2 通过URL定位页面
 ```
-http://blog.xxx.com/index.php?a=blog.list
+http://blog.xxx.com/index.php?a=blog.pageList
 ```
 
-可以看到结尾是a=blog.list
+可以看到结尾是a=blog.pageList
 
 所以可以在controller下找到 BlogController.php
 
-其中BlogController.list处理这个请求
+其中BlogController.pageList处理这个请求
 
-在views目录下有blog这个目录，且目录下有list.php这个文件渲染页面效果
+在views目录下有blog这个目录，且目录下有page-list.php这个文件渲染页面效果
+
+`如果a后面的参数没有点(.)，默认请求到DefaultController下， 例如a=login`
+
+# 五 多语言
+
+在生成的例子中，已有多语言的配置
+
+设置多语言在，/data0/website/blog/web/lang目录下
+
+en.php
+```
+<?php
+return array(
+'Hi'=>'Hi',
+'Hi, %1, welcome to the website developed by the %2 php framework.'=>'Hi, %1, welcome to the website developed by the %2 php framework.',
+);
+```
+zh.php
+```
+<?php
+return array(
+'Hi'=>'您好',
+'Hi, %1, welcome to the website developed by the %2 php framework.'=>'你好, %1, 欢迎访问由%2 php框架开发的网站。',
+);
+```
+
+页面中显示多语言
+```
+<p>{{ @Hi }}</p>
+<p><?php echo langi18n('Hi'); ?></p>
+// 以上英语显示:Hi, 中文显示:您好
+
+<p><?php echo langi18n('Hi, %1, welcome to the website developed by the %2 php framework.', 'Cheech', 'Doba')?></p>
+// 如果翻译中包含要替换的变量，可使用以上方法
+// 以上中文输出:你好, Cheech, 欢迎访问由Doba php框架开发的网站。
+```
+
+# 六 开放外部调用接口
+
+### 1 设置固定的帐号密钥
+
+在/data0/website/blog/common/config/config.php中设置
+
+```
+$API_CALL_CONFIG = array(
+    // '帐号'=>'密钥', 可自已定义
+    '10000'=>'e10adc3949ba59abbe56e057f20f883e',
+)
+```
+
+### 2 PHP请求方式参考
+```
+define('API_KEY', '10000');
+define('API_TOKEN', 'e10adc3949ba59abbe56e057f20f883e');
+
+$content = json_encode(
+    array(
+        'api'=>'api.Util.ping',
+        'edatas'=>array('test'=>'测试请求'),
+        'timestamp'=>time(),
+        'version'=>'v1.0'
+    )
+);
+$headers = array(
+    "Content-Type"=> "application/json",
+    "X-Api-Key" => API_KEY,
+    "X-Api-Token" => md5($content.API_TOKEN),
+);
+$rawHeader = "";
+foreach ($headers as $h => $c){
+    $rawHeader.=$h . ": " . $c . "\r\n";
+}
+$ctx = stream_context_create(array(
+    'http' => array(
+        'method'  => 'POST',
+        'header'  => $rawHeader,
+        'content' => $content
+    )
+));
+$jsonResponse = file_get_contents("http://blog.xxx.com/rpc.php", false, $ctx);
+print_r(@json_decode($jsonResponse, true));
+```
+
+### 3 CURL请求方式参考
+
+```
+# md5 校验 md5('111111') = 96e79218965eb72c92a549dd5a330112
+# x-api-token : 816bef396f9a37feac4ffd528fd5cb86 = md5('{"api":"api.Util.ping","edatas":{"edatas":{"test":"测试"}},"timestamp":1523863299,"version":"v1.0"}4ef0f32a3d095d889866aa86e9600f2f')
+
+# curl请求
+curl -i \
+    -H "Content-Type: application/json" \
+    -H "X-Api-Key: 10000" \
+    -H "X-Api-Token: 816bef396f9a37feac4ffd528fd5cb86" \
+    -X POST \
+    -d '{"api":"api.Util.ping","edatas":{"edatas":{"test":"测试"}},"timestamp":1523863299,"version":"v1.0"}' \
+    http://blog.xxx.com/rpc.php
+
+
+#返回结果
+HTTP/1.1 200 OK
+Date: Wed, 22 Nov 2019 04:56:52 GMT
+Server: Apache/2.4.12 (Unix) PHP/5.6.6 OpenSSL/0.9.8zh
+X-Powered-By: PHP/5.6.6
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: Content-Type
+Access-Control-Allow-Methods: POST
+Content-Length: 94
+Content-Type: application/json
+
+{"ErrorCode":"9999","Message":"SUCCESS","Data":{"Results":{"time":"2019-11-22 04:56:52","request":{"edatas:{"test":"测试"},"lang":"en"}}}}
+```
+
+### 4 JAVA请求方式参考
+
+```
+package doba;
+
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.methods.PostMethod;
+import org.apache.commons.httpclient.methods.RequestEntity;
+import org.apache.commons.httpclient.methods.StringRequestEntity;
+import org.apache.http.client.ClientProtocolException;
+
+import net.sf.json.JSONObject;
+
+public class Demo {
+    private static String REQUEST_URL = "http://blog.xxx.com/rpc.php";
+
+    private static String API_KEY = "10000";
+    private static String API_TOKEN = "e10adc3949ba59abbe56e057f20f883e";
+
+    public static void main(String[] args) {
+        try {
+            // 封装查询条件: {"timestamp":1545131290,"api":"api.Util.ping","edatas":{"test":"测试"},"version":"v1.0"}
+            Map<String,Object> edatas = new HashMap<String,Object>();
+            edatas.put("test", "测试");
+
+            Map&lt;String,Object> requestJsonEntitBean = new HashMap<String,Object>();
+            requestJsonEntitBean.put("api", "api.Util.ping");
+            requestJsonEntitBean.put("edatas", edatas);
+            requestJsonEntitBean.put("timestamp", System.currentTimeMillis() / 1000);
+            requestJsonEntitBean.put("version", "v1.0");
+            
+            String jsonstr = JSONObject.fromObject(requestJsonEntitBean).toString();
+
+            System.out.println(jsonstr);
+
+            PostMethod pm = new PostMethod(REQUEST_URL);
+            pm.setRequestHeader("X-Api-Key", API_KEY);
+            pm.setRequestHeader("X-Api-Token", Demo.md5(jsonstr+API_TOKEN));
+            pm.setRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36"));
+
+            System.out.println(Demo.md5(jsonstr+API_TOKEN));
+            
+            RequestEntity requestEntity = new StringRequestEntity(jsonstr, "application/json", "UTF-8");
+            pm.setRequestEntity(requestEntity);
+            HttpClient httpClient = new HttpClient();
+            try {
+                httpClient.executeMethod(pm);
+                byte[] responseBody = pm.getResponseBody();
+                String response = new String(responseBody, "UTF-8");
+                if (response != null) {
+                    try {
+                        System.out.println(response);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (ClientProtocolException e1) {
+                e1.printStackTrace();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    public final static String md5(String s) {  
+        char hexDigits[]={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};         
+        try {  
+            byte[] btInput = s.getBytes();  
+            MessageDigest mdInst = MessageDigest.getInstance("MD5");  
+            mdInst.update(btInput);  
+            byte[] md = mdInst.digest();  
+            int j = md.length;  
+            char str[] = new char[j * 2];  
+            int k = 0;  
+            for (int i = 0; i < j; i++) {  
+                byte byte0 = md[i];  
+                str[k++] = hexDigits[byte0 >>> 4 & 0xf];  
+                str[k++] = hexDigits[byte0 & 0xf];  
+            }  
+            return new String(str);  
+        } catch (Exception e) {  
+            e.printStackTrace();  
+            return null;  
+        }  
+    } 
+}
+```
+
+### 5 PYTHON请求方式
+
+```
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+
+import requests
+import json
+import time
+import hashlib
+
+API_KEY = "10000"
+API_SECURE = "e10adc3949ba59abbe56e057f20f883e"
+
+data = {
+    "api":"api.Util.ping",
+    "edatas": {
+        "test":"测试"
+    },
+    "timestamp":time.time(),
+    "version": "1.0",
+}
+token = hashlib.new('md5', json.dumps(data) + API_SECURE).hexdigest()
+header = {
+    'Content-Type': 'application/json',
+    'X-Api-Key': API_KEY,
+    'X-Api-Token': token,
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36',
+}
+
+url = 'https://blog.xxx.com/rpc.php'
+post = requests.post(url, data=json.dumps(data), headers=header)
+
+print(post.text)
+```

@@ -16,14 +16,14 @@ class RedisClient {
     
     private static $instance = array();
     protected $redisServer =  null;
-    private $configs = array('host'=>'127.0.0.1', 'port'=>6379, 'pass'=>'', 'persistent'=>false);
+    private $redisConfig = array('host'=>'127.0.0.1', 'port'=>6379, 'pass'=>'', 'persistent'=>false);
 
     // queue key
     protected $qkey = '';
 
     private function __construct($key='default') {
         if(! extension_loaded('redis')) throw new \Exception('redis extension not loaded');
-        $this->configs = getRedisConfig($key);
+        $this->redisConfig = \Config::me()->getRedisConfig($key);
         $this->connect();
     }
 
@@ -53,14 +53,14 @@ class RedisClient {
      *  retry_interval: int, value in milliseconds (optional)
      */
     public function connect() {
-        $configs = $this->configs;
+        $redisConfig = $this->redisConfig;
         $redisServer = new \Redis();
-        if($configs['persistent']) {
-            $redisServer->pconnect($configs['host'], $configs['port']);
+        if($redisConfig['persistent']) {
+            $redisServer->pconnect($redisConfig['host'], $redisConfig['port']);
         } else {
-            $redisServer->connect($configs['host'], $configs['port']);
+            $redisServer->connect($redisConfig['host'], $redisConfig['port']);
         }
-        if($configs['pass']) $redisServer->auth($configs['pass']);
+        if($redisConfig['pass']) $redisServer->auth($redisConfig['pass']);
         $this->redisServer = $redisServer;
         return $this->redisServer;
     }
