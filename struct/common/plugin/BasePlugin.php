@@ -1,4 +1,4 @@
-<?
+<?php
 class BasePlugin {
     /**
      * Load all public methods in the class

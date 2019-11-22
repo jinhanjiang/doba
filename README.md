@@ -176,7 +176,7 @@ $account2 = \Doba\Dao\Db2\AccountDAO::me()->finds(array('selectCase'=>'*', 'limi
 class Config extends \Doba\BaseConfig {
     ...
 
-    public static function initDaoMapConfig() {
+    public function initDaoMapConfig() {
         $initDaoMapConfig = parent::initDaoMapConfig();
         return array(
             'IGNORED_TABLES'=>array('/^\w+_\d+$/i', '/^\w+\d+$/i', '/_test$/i')

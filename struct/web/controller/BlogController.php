@@ -1,4 +1,4 @@
-<?
+<?php
 use Doba\Util;
 use Doba\Dao\XxxDAO;
 

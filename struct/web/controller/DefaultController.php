@@ -1,4 +1,4 @@
-<?
+<?php
 use Doba\Util;
 use Doba\SQL;
 use Doba\Session;
