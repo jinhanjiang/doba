@@ -51,7 +51,7 @@ class Session{
     }
     
     public function drop(){
-        if (!func_num_args())throw new Exception('missing argument(s)');
+        if (!func_num_args())throw new \Exception('missing argument(s)');
         foreach (func_get_args() as $arg)unset($this->session_cache[$arg]);
         $this->save();
     }

@@ -74,7 +74,7 @@ class BaseConfig
     
     public function getRedisConfig($key='default') {
         $redisConfig = isset($this->redisConfigs[$key]) ? $this->redisConfigs[$key] : array();
-        if(! $redisConfig) throw new Exception('['.$key.'] redis connection configuration not found');
+        if(! $redisConfig) throw new \Exception('['.$key.'] redis connection configuration not found');
         return $redisConfig;
     }
 
@@ -90,7 +90,7 @@ class BaseConfig
         if(! $GLOBALS[$key.'db']) {
             $dbConfigs = $this->getDbConfigs();
             $dbConfig = isset($dbConfigs[$key]) ? $dbConfigs[$key] : array();
-            if(! $dbConfig) throw new Exception('['.$key.'] database connection configuration not found');
+            if(! $dbConfig) throw new \Exception('['.$key.'] database connection configuration not found');
             $GLOBALS[$key.'db'] = new \Doba\SQL($dbConfig);
         }
         return $GLOBALS[$key.'db'];
@@ -117,7 +117,8 @@ class BaseConfig
     public function initDaoMapConfig() {
         return array(
             // Tables ignored when generating tables dao and map
-            'IGNORED_TABLES'=>array('/^\w+_\d+$/i', '/^\w+\d+$/i')
+            'IGNORED_TABLES'=>array('/^\w+_\d+$/i', '/^\w+\d+$/i'),
+            'IGNORED_TABLES_PREFIX'=>array(),
         );
     }
 

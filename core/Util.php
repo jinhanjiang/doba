@@ -284,7 +284,7 @@ HTML;
         {
             $deniedFileExts = array('php', 'exe', 'bat');
             if (in_array(strtolower($fileInfo['extension']), $deniedFileExts)) {
-                throw new Exception('The file is not allowed to be uploaded');
+                throw new \Exception('The file is not allowed to be uploaded');
             }
             $extension = $fileInfo['extension'];
         }
@@ -292,7 +292,7 @@ HTML;
         else if('image/png' == $_FILES[$field_name]['type']) $extension = 'png';
         else if('image/gif' == $_FILES[$field_name]['type']) $extension = 'gif';
         
-        if(! $extension) throw new Exception('Unknown file type');
+        if(! $extension) throw new \Exception('Unknown file type');
         $new_filename = self::getRandomValue().'.'.$extension;
         move_uploaded_file($_FILES[$field_name]['tmp_name'], $default_path.$new_filename);
         return $new_filename;

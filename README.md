@@ -179,7 +179,8 @@ class Config extends \Doba\BaseConfig {
     public function initDaoMapConfig() {
         $initDaoMapConfig = parent::initDaoMapConfig();
         return array(
-            'IGNORED_TABLES'=>array('/^\w+_\d+$/i', '/^\w+\d+$/i', '/_test$/i')
+            'IGNORED_TABLES'=>array('/^\w+_\d+$/i', '/^\w+\d+$/i', '/_test$/i'),
+            'IGNORED_TABLES_PREFIX'=>array('/^db_/'),
             ) + $initDaoMapConfig;
     }
 

@@ -18,16 +18,19 @@ class BaseDAO {
     protected $tbname;
     protected $originaltbname;
     protected $tbinfo = array();
+    private $sp = '';
     private $tbpk = 'id';
 
     protected function __construct($tbname, $options=array())  {
         $link = isset($options['link']) && $options['link'] ? $options['link'] : 'default';
         $tbpk = isset($options['tbpk']) && $options['tbpk'] ? $options['tbpk'] : 'id';
+        $sp = isset($options['sp']) && $options['sp'] ? $options['sp'] : '';
         $tbinfo = isset($options['tbinfo']) && $options['tbinfo'] ? $options['tbinfo'] : $this->getTableInfo();
         $this->db = \Config::me()->getDb($link);
         $this->tbname = $tbname;
         $this->originaltbname = $tbname;
         $this->tbpk = $tbpk;
+        $this->sp = $sp;
         $this->tbinfo = $tbinfo;
     }
 
@@ -45,8 +48,7 @@ class BaseDAO {
     }
 
     public function table($table) {
-        echo $table;
-        $this->tbname = preg_match('/^\d+$/', $table) ? $this->originaltbname.'_'.$table : $table;
+        $this->tbname = preg_match('/^\d+$/', $table) ? $this->originaltbname.$this->sp.$table : $table;
         return $this;
     }
 
@@ -233,9 +235,9 @@ class BaseDAO {
     {
         unset($params['limit'], $params['orderBy']);
 
-        $groupByStr = '';
+        $groupBy = '';
         if(! empty($params['groupBy'])) {
-            $groupByStr = "GROUP BY {$params['groupBy']}";
+            $groupBy = "GROUP BY {$params['groupBy']}";
         }
         $firstField = false !== ($pos = stripos($groupBy, ',')) ? trim(substr($groupBy, 0, $pos)) : $groupBy;
         $params['selectCase'] = empty($groupBy) ? 'COUNT(*) AS `cnt`' : 'COUNT(DISTINCT '.$firstField.') AS `cnt`';

@@ -97,14 +97,19 @@ function initDaoMap($project, $dbConfig)
     $initConfig = \Config::me()->initDaoMapConfig();
     for($i = 0, $ct = count($datas); $i < $ct; $i ++)
     {
-        $tableName = current($datas[$i]); $invalidTablename = false;
+        $tableName = current($datas[$i]); $daoName = $tableName; 
+        $invalidTablename = false;
         if(is_array($initConfig['IGNORED_TABLES'])) 
             foreach($initConfig['IGNORED_TABLES'] as $regular) {
             if(preg_match($regular, $tableName)) {
                 $invalidTablename = true; break;
             }
         }
-        if(! $invalidTablename) $tables[] = $tableName;
+        if(is_array($initConfig['IGNORED_TABLES_PREFIX'])) 
+            foreach($initConfig['IGNORED_TABLES_PREFIX'] as $regular) {
+                $daoName = preg_replace($regular, '', $tableName);
+        }
+        if(! $invalidTablename) $tables[] = array('daoName'=> $daoName, 'tableName'=>$tableName);
     }
     initDao($project ? $project : 'default', 
         $daoPath, $daoNamespace, $mapNamespace, $tables);
@@ -118,14 +123,14 @@ namespace {{ @dao namespace }};
 
 use Doba\BaseDAO;
 
-class {{ @class name }}DAO extends BaseDAO {
+class {{ @dao name }}DAO extends BaseDAO {
 
     protected function __construct() {
-        parent::__construct('{{ @class name }}', 
+        parent::__construct('{{ @table name }}', 
             array(
                 'link'=>'{{ @project }}',
-                'tbpk'=>\{{ @map namespace}}\{{ @class name }}::getTablePk(),
-                'tbinfo'=>\{{ @map namespace}}\{{ @class name }}::getTableInfo(),
+                'tbpk'=>\{{ @map namespace}}\{{ @table name }}::getTablePk(),
+                'tbinfo'=>\{{ @map namespace}}\{{ @table name }}::getTableInfo(),
             )
         ); 
     }
@@ -135,12 +140,13 @@ TP;
     foreach($tables as $table) 
     {
         \Doba\Util::mkdir($path);
-        if(! is_file($daofile = $path.$table.'DAO.php')) 
+        if(! is_file($daofile = $path.$table['daoName'].'DAO.php')) 
         {
             $GLOBALS['variables'] = array(
                 'dao namespace'=>$daoNamespace,
                 'map namespace'=>$mapNamespace,
-                'class name'=>$table,
+                'dao name'=>$table['daoName'],
+                'table name'=>$table['tableName'],
                 'project'=>$project,
             );
             preg_match_all("/{{\s*@(.[^}]+)}}/", $template, $out);
@@ -184,7 +190,7 @@ TP;
         \Doba\Util::mkdir($path);
 
         $tableInfo = ""; $tbpk = "";
-        $results = $db->query("DESC `{$table}`");
+        $results = $db->query("DESC `{$table['tableName']}`");
         if(is_array($results)) foreach($results as $i=>$result) {
             if(preg_match('/int/i', $result->type)) $type = 'int';  
             else if(preg_match('/(float|double|decimal)/i', $result->type)) $type = 'float';
@@ -197,14 +203,14 @@ TP;
             if($pk) $tbpk = $result->Field;
         }
 
-        $results = $db->query("SHOW CREATE TABLE `{$table}`");
+        $results = $db->query("SHOW CREATE TABLE `{$table['tableName']}`");
         $results = array_values((array)$results[0]);
 
-        $mapfile = $path.$table.'.php';
+        $mapfile = $path.$table['tableName'].'.php';
 
         $GLOBALS['variables'] = array(
             'map namespace'=>$mapNamespace,
-            'class name'=>$table,
+            'class name'=>$table['tableName'],
             'table pk'=>$tbpk,
             'table info'=>$tableInfo,
             'create sql'=>preg_replace('/AUTO_INCREMENT=\d+\s*/i', '', $results[1]),
