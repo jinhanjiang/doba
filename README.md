@@ -259,8 +259,191 @@ return array(
 // 如果翻译中包含要替换的变量，可使用以上方法
 // 以上中文输出:你好, Cheech, 欢迎访问由Doba php框架开发的网站。
 ```
+# 六 数据库增删改操作
 
-# 六 开放外部调用接口
+前面我看看到可以通过 Dao来查询数据库， 其实Dao主要封装了，对数据库的（增，删，查，改）的操作，下面我们来看一下如何操作
+
+### 1 增加数据到数据库
+```
+# 以上面的AccountDAO为例，创建数据
+\Doba\Dao\Db1\AccountDAO::me()->insert(
+    array(
+        'username'=>'doba', 
+        'password'=>'123456',
+        'source'=>1,
+        'otherId'=>12345,
+        'name'=>'doba',
+        'nick'=>'xiao ming',
+        'createTime'=>date('Y-m-d H:i:s'),
+    )
+);
+```
+
+### 2 删除数据库数据
+```
+\Doba\Dao\Db1\AccountDAO::me()->delete(1);
+
+# 解释:通过查看\Doba\BaseDao.php可以知道， 数据库表当中有一个主键(primary key), 在创建表结构时，可自定义，Doba框架默认为这个值为id, 当然你的表结构不是这个值，可以初始化Dao的时候修改这个值
+```
+
+### 3 查询数据库数据
+
+同上面(2解释)，传入值为主键值
+```
+\Doba\Dao\Db1\AccountDAO::me()->get(1);
+
+```
+
+当然如果你的表当中有，其他唯一键判断，可查出一条数据，可自行封装一个方法， 例如
+```
+class AccountDAO extends BaseDAO {
+    ...
+
+    public function getBy($params)
+    {
+        if(isset($params['id'])) return parent::get((int)$params['id']);
+
+        $plus = array();
+
+        // source 和 otherId 保证数据库查询唯一值
+        if($params['source'] && $params['otherId']) {
+            $plus['source'] = $params['source'];
+            $plus['otherId'] = $params['otherId'];
+        }
+
+        // 如果有其他条件，可以再加
+
+        $objs = count($plus) > 0 ? $this->finds(array('limit'=>1) + $plus) : array(); 
+        return isset($objs[0]) ? $objs[0] : NULL;
+    }
+
+    ...
+}
+
+```
+
+除了 查询单条数据，使用finds方法可以查出多条数据，及通过多个条件查询
+
+```
+# 相等查询
+
+\Doba\Dao\Db1\AccountDAO::me()->finds(
+    array(
+        'username'=>'doba', 
+    )
+);
+# SQL语句: SELECT * FROM `Account` WHERE 1=1 AND `username`='doba'
+
+还可以这样写
+\Doba\Dao\Db1\AccountDAO::me()->finds(
+    array(
+        'username'=>array('value'=>'doba'), 
+    )
+);
+# SQL语句: SELECT * FROM `Account` WHERE 1=1 AND `username`='doba'
+
+```
+
+可以看到上面使第二个查询传入的值为数组，可以设置多个条件
+```
+# 数据可传值
+array('and'=>true, 'op'=>'=', 'value'=>'')
+```
+
+- and 默是(true)， 意思是，在拼接语句时用AND， 当然这里传false, 拼接用OR
+- op 默认是(=)等于，字段名后面的操作符是等于
+- value 实际传入的值，可以传入( integer、float、string 或 boolean 的变量 ) 不能传入 ( array、object 和 resource , NULL )
+
+其中op，有多种传值方式
+```
+[eq =], [geq, >=], [gt, >], [leq, <=], [lt, <], [<>, !=], in, not in ,like, [custom]
+```
+
+我来拿实际的例子来看一下
+
+```
+# 自定义查询
+\Doba\Dao\Db1\AccountDAO::me()->finds(
+    array(
+        'name'=>array('op'=>'custom', 'value'=>"`name` LIKE '%doba%' OR `nick` LIKE '%doba%'"),
+    )
+);
+# SQL语句: SELECT * FROM `Account` WHERE 1=1 AND (`name` LIKE '%doba%' OR `nick` LIKE '%doba%')
+
+
+# 条件查询
+\Doba\Dao\Db1\AccountDAO::me()->finds(
+    array(
+        'name'=>array('op'=>'like', 'value'=>"doba"),
+    )
+);
+# SQL语句: SELECT * FROM `Account` WHERE 1=1 AND `name` LIKE '%doba%')
+
+
+\Doba\Dao\Db1\AccountDAO::me()->finds(
+    array(
+        'source'=>array('and'=>false, 'op'=>'in', 'value'=>"1,2,3"),
+    )
+);
+# SQL语句: SELECT * FROM `Account` WHERE 1=1 OR `source` IN (1,2,3)
+
+\Doba\Dao\Db1\AccountDAO::me()->finds(
+    array(
+        'id'=>array('op'=>'in', 'value'=>"1,2,3"),
+    )
+);
+# SQL语句: SELECT * FROM `Account` WHERE 1=1 OR `id` IN (1,2,3)
+
+\Doba\Dao\Db1\AccountDAO::me()->finds(
+    array(
+        'id'=>array('op'=>'gt', 'value'=>"100"), // gt 可以换成 > 是相同的效果
+    )
+);
+# SQL语句: SELECT * FROM `Account` WHERE 1=1 AND `id`>'100'
+```
+
+上面讲到了传值通过数组来，拼接条件，接下来讲一下通过字段后缀来拼条件， 这样操作比较简洁
+
+```
+\Doba\Dao\Db1\AccountDAO::me()->finds(
+    array(
+        'idGt'=>100,
+    )
+);
+# SQL语句: SELECT * FROM `Account` WHERE 1=1 AND `id`>'100'
+
+\Doba\Dao\Db1\AccountDAO::me()->finds(
+    array(
+        'idIn'=>"1,2,3",
+        'orderBy'=>'id DESC',
+        'groupId'=>'source',
+        'limit'=>5,
+    )
+);
+# SQL语句: SELECT * FROM `Account` WHERE 1=1 OR `id` IN (1,2,3) GROUP BY source ORDER BY id DESC LIMIT 5
+```
+
+可以发现，通过字段名 + 后缀[ Gt, In , Like, Geq, Leq, Lt, Neq] 来达到相关查询, 更多方法，可以自已尝试一下
+
+
+### 4 更新数据库数据
+
+```
+\Doba\Dao\Db1\AccountDAO::me()->change(
+    1, // 注意这里，(重点), 这个值是主键值
+    array(
+        'username'=>'doba', 
+        'password'=>'123456',
+        'source'=>1,
+        'otherId'=>12345,
+        'name'=>'doba',
+        'nick'=>'xiao ming',
+        'createTime'=>date('Y-m-d H:i:s'),
+    )
+);
+```
+
+# 七 开放外部调用接口
 
 ### 1 设置固定的帐号密钥
 

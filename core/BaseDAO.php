@@ -185,31 +185,43 @@ class BaseDAO {
         $fields = array_column($this->tbinfo, 'field');
         foreach($fields as $field) 
         {
-            if(isset($params[$field]) && '' !== $params[$field]) {
+            if(isset($params[$field])) 
+            {
                 $value = $params[$field];
                 if(is_array($value))
                 {
-                    // array('and'=>false, 'op'=>'=', 'value'=>'')
-                    // op: [eq =], [geq, >=], [leq, <=], in, not in ,like, [custom]
-                    $value = $value['value']; $vescape = false;
-                    $and = isset($value['and']) && false === $value['and'] ? 'OR' : 'AND';
-                    $op = strtolower($value['op']);
-                    if('>=' == $op || 'geq'== $op) { 
-                        $op = '>='; $vescape = true; 
-                    } else if('<=' == $op || 'leq'== $op) {
-                        $op = '<='; $vescape = true; 
-                    } else if('in' == $op) $op = 'IN';
-                    else if('like' == $op) $op = 'LIKE';
-                    else if('custom' == $op) {
-                        $op = ''; $value = "({$value})";
-                    } else {
-                        $op = '='; $vescape = true; 
+                    if(isset($value['value']) && is_scalar($value['value']) && '' !== $value['value'])
+                    {
+                        // array('and'=>false, 'op'=>'=', 'value'=>'')
+                        // op: [eq =], [geq, >=], [gt, >], [leq, <=], [lt, <], [<>, !=], in, not in ,like, [custom]
+                        $valueText = $value['value']; $vescape = false;
+                        $and = isset($value['and']) && false === $value['and'] ? 'OR' : 'AND';
+                        $op = strtolower($value['op']);
+                        if('>=' == $op || 'geq'== $op) { 
+                            $op = '>='; $vescape = true; 
+                        } else if('>' == $op || 'gt'== $op) { 
+                            $op = '>='; $vescape = true; 
+                        } else if('<=' == $op || 'leq'== $op) {
+                            $op = '<='; $vescape = true; 
+                        } else if('<' == $op || 'lt'== $op) {
+                            $op = '<'; $vescape = true; 
+                        } else if('<>' == $op || '!='== $op) {
+                            $op = '<'; $vescape = true; 
+                        } else if('in' == $op) {
+                            $op = 'IN'; $valueText = "({$valueText})";
+                        }else if('like' == $op) $op = 'LIKE';
+                        else if('custom' == $op) {
+                            $op = $field = ''; $valueText = "({$valueText})";
+                        } else {
+                            $op = '='; $vescape = true; 
+                        }
+                        if($vescape) $valueText = "'".$this->escape($valueText)."'"; 
+                        if($field) $field = "`{$field}`";
+                        $sql .= " {$and} {$field}{$op}{$valueText}";
                     }
-                    if($vescape) $value = "'".$this->escape($value)."'"; 
-                    $sql .= " {$and} `{$field}`{$op}{$value}";
                 }
-                else {
-                    $sql .= " AND `{$field}`='".$this->escape($params[$field])."'";
+                else if(is_scalar($value) && '' !== $value) {
+                    $sql .= " AND `{$field}`='".$this->escape($value)."'";
                 }
             } if(isset($params[$field.'Like']) && '' !== $params[$field.'Like']) {
                 $sql .= " AND `{$field}` LIKE '%".$this->escape($params[$field.'Like'])."%'";
