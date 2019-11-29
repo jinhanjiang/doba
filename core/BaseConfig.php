@@ -86,8 +86,9 @@ class BaseConfig
         }
     }
 
-    public function getDb($key='default') {
-        if(! $GLOBALS[$key.'db']) {
+    public function getDb($key='default', $option=array()) {
+        $reconnect = isset($option['reconnect']) && true === $option['reconnect'] ? true : false;
+        if(! $GLOBALS[$key.'db'] || $reconnect) {
             $dbConfigs = $this->getDbConfigs();
             $dbConfig = isset($dbConfigs[$key]) ? $dbConfigs[$key] : array();
             if(! $dbConfig) throw new \Exception('['.$key.'] database connection configuration not found');

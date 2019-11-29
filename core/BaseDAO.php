@@ -19,19 +19,17 @@ class BaseDAO {
     protected $originaltbname;
     protected $tbinfo = array();
     private $sp = '';
+    private $link = 'default';
     private $tbpk = 'id';
 
     protected function __construct($tbname, $options=array())  {
-        $link = isset($options['link']) && $options['link'] ? $options['link'] : 'default';
-        $tbpk = isset($options['tbpk']) && $options['tbpk'] ? $options['tbpk'] : 'id';
-        $sp = isset($options['sp']) && $options['sp'] ? $options['sp'] : '';
-        $tbinfo = isset($options['tbinfo']) && $options['tbinfo'] ? $options['tbinfo'] : $this->getTableInfo();
-        $this->db = \Config::me()->getDb($link);
         $this->tbname = $tbname;
         $this->originaltbname = $tbname;
-        $this->tbpk = $tbpk;
-        $this->sp = $sp;
-        $this->tbinfo = $tbinfo;
+        $this->link = isset($options['link']) && $options['link'] ? $options['link'] : 'default';
+        $this->tbpk = isset($options['tbpk']) && $options['tbpk'] ? $options['tbpk'] : 'id';
+        $this->sp = isset($options['sp']) && $options['sp'] ? $options['sp'] : '';
+        $this->tbinfo = isset($options['tbinfo']) && $options['tbinfo'] ? $options['tbinfo'] : $this->getTableInfo();
+        $this->db = \Config::me()->getDb($this->link);
     }
 
     public static function me(){
@@ -42,6 +40,9 @@ class BaseDAO {
         return self::$instance[$class];
     }
 
+    public function resetdb() { 
+        $this->db = \Config::me()->getDb($this->link, array('reconnect'=>true)); 
+    }
     public function getdb() { return $this->db; }
     public function setdb($db=NULL) { 
         $this->db = $db; return $this; 

@@ -426,6 +426,42 @@ array('and'=>true, 'op'=>'=', 'value'=>'')
 可以发现，通过字段名 + 后缀[ Gt, In , Like, Geq, Leq, Lt, Neq] 来达到相关查询, 更多方法，可以自已尝试一下
 
 
+小技巧， 数据库有很多的数据，要全部更新， 但不同的条件更新不同的值可以这样写
+
+```
+
+$lastId = 0; $limit = 100;
+while (true) {
+    $objs = \Doba\Dao\AccountDAO::me()->finds(
+        array(
+            'selectCase'=>'id,otherId', 
+            'source'=>1, 
+            'idGt'=>$lastId, 
+            'orderBy'=>'id ASC', 
+            'limit'=> $limit
+        )
+    );
+    if(($ct = count($objs)) > 0)
+    {
+        foreach($objs as $obj)
+        {
+            // 这里是很行数据，根据条件处理（修改，删除）
+
+        }
+        if($ct < $limit) break;
+        $lastId = $obj->id,
+    }
+    else
+    {
+        break;
+    }
+    usleep(mt_rand(500, 2000000));
+    // 脚本执行太长时间，数据库链接可能会断掉，可以用下面语句重连数据库
+    \Doba\Dao\AccountDAO::me()->resetdb();
+}
+```
+
+
 ### 4 更新数据库数据
 
 ```
