@@ -21,6 +21,7 @@ class BaseDAO {
     private $sp = '';
     private $link = 'default';
     private $tbpk = 'id';
+    private $transactions = 0;
 
     protected function __construct($tbname, $options=array())  {
         $this->tbname = $tbname;
@@ -261,6 +262,24 @@ class BaseDAO {
 
     protected function formatSQL($sql) {
         return trim(preg_replace(array("/\n/", "/\s+/"), " ", $sql));
+    }
+
+    protected function begin() {
+        ++$this->transactions;
+        if($this->transactions == 1) $this->db->begin();
+    }
+
+    protected function rollback() {
+        if($this->transactions == 1) {
+            $this->transactions = 0; $this->db->rollback();
+        } else {
+            --$this->transactions;
+        }
+    }
+
+    protected function commit() {
+        if ($this->transactions == 1) $this->db->commit();
+        --$this->transactions;
     }
 
     public function escape($value) {

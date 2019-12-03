@@ -164,7 +164,8 @@ $account2 = \Doba\Dao\Db2\AccountDAO::me()->finds(array('selectCase'=>'*', 'limi
 
 ```
 问:为什么生成DAO和MAP
-答:生成DAO文件，可支持对表数据的，增(insert)，删(delete)，查(finds, get)，改(change)操作, 生成MAP是生成数库表的字段映射，生成insert, update, select的sql语句时，可对传入的表字段进行验证
+答:生成DAO文件，可支持对表数据的，增(insert)，删(delete)，查(finds, get)，改(change)操作, 
+生成MAP是生成数库表的字段映射，生成insert, update, select的sql语句时，可对传入的表字段进行验证
 ```
 
 生成表映射的时候，如果分多张表，有些表不生成映射可设置规则，默认以 下划线数字(例如_0)， 或 数字结尾的表，不生成映射
@@ -283,7 +284,8 @@ return array(
 ```
 \Doba\Dao\Db1\AccountDAO::me()->delete(1);
 
-# 解释:通过查看\Doba\BaseDao.php可以知道， 数据库表当中有一个主键(primary key), 在创建表结构时，可自定义，Doba框架默认为这个值为id, 当然你的表结构不是这个值，可以初始化Dao的时候修改这个值
+# 解释:通过查看\Doba\BaseDao.php可以知道， 数据库表当中有一个主键(primary key), 
+在创建表结构时，可自定义，Doba框架默认为这个值为id, 当然你的表结构不是这个值，可以初始化Dao的时候修改这个值
 ```
 
 ### 3 查询数据库数据
@@ -478,6 +480,40 @@ while (true) {
     )
 );
 ```
+
+### 5 数据库事务提交
+
+```
+# 事务操作在DAO类当中写
+
+class AccountDAO extends BaseDAO {
+    ...
+
+    public function delete($id)
+    {
+        $obj = $this->get($id);
+        if(! $obj) return false;
+
+        try{
+            $this->begin();
+
+            \Doba\Dao\Db1\AccountPlusDAO::me()->query("DELETE `AccountPlus` WHERE `accountId`={$obj->id}");
+            parent::delete($obj->id);
+
+            $this->commit();
+        } catch(\Exception $ex) {
+            $this->rollback();
+            return false;
+        }
+        return true;
+    }
+
+    ...
+}
+
+```
+说明：当前框架事务支持嵌套事务
+
 
 # 七 开放外部调用接口
 
