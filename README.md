@@ -561,6 +561,12 @@ public function index() {
 
 ```
 
+这里注意$GLOGALS['plugin']->call， 
+
+里面第一个参数const, 是data0/website/blog/common/plugin/下面const的名字， 
+里面第二个参数getConst，是data0/website/blog/common/plugin/const/config.php中的getConst方法， 只有public的方法才可被调用
+里面第三个参数， 是第二个参数的传参
+
 
 
 # 八 开放外部调用接口
