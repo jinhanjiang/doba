@@ -514,8 +514,56 @@ class AccountDAO extends BaseDAO {
 ```
 说明：当前框架事务支持嵌套事务
 
+# 七 插件开发
 
-# 七 开放外部调用接口
+当前框架核心模块主要，能让基础功能运行起来。如果要用到第三方的功能，可通过插件方式集成进来
+
+例如我们创建一下常量插件， 在/data0/website/blog/common/plugin下创建一个目录const, 
+在const目录下创建一个config.php文件,写入如下内容
+
+```
+
+<?php
+use Doba\Util;
+
+class ConstPlugin extends BasePlugin {
+
+    public function __construct(&$plugin){ 
+        $this->_install($plugin, $this);
+    }
+
+    // 以public 定义的方法，可以外部调用
+    public function getConst($params)
+    {
+        $data['ON_OFF_STATUS'] = array(
+            0=>'禁用',
+            1=>'启用'
+        );
+
+        // 定义其他的值
+
+        return isset($data[$params['key']]) ? $data[$params['key']] : array();
+    }
+}
+
+```
+
+创建好上面文件后。可以其他地方使，例如在DefaultController.php中调用
+
+```
+
+public function index() {
+
+    // 获取对应值
+    $data['ON_OFF_STATUS'] = $GLOGALS['plugin']->call('const', 'getConst', array('key'=>'ON_OFF_STATUS'));
+
+}
+
+```
+
+
+
+# 八 开放外部调用接口
 
 ### 1 设置固定的帐号密钥
 
