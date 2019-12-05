@@ -24,15 +24,17 @@ try{
             }
             break;
 
+        case 'lang':
+            loadConfig();
+            if(is_dir($viewPages = ROOT_PATH.'web/views/'))
+            {
+                $dirs = \Doba\Util::getDirs($viewPages);
+            }
+            echo 'To be developed';
+            break;
+
         default: // Refresh table structure
-            $configFile = ROOT_PATH.'common/config/config.php';
-            if(! is_file($configFile)) {
-                echo 'Please perform the initialization framework first.'; exit;
-            }
-            require($configFile);
-            if(! \Config::me()->isDevEnvironment()) {
-                echo 'Current operations can only be performed in a development environment'; exit;
-            }
+            loadConfig();
             $dbConfigs = \Config::me()->getDbConfigs(); $dbcnt = 0;
             if(isset($dbConfigs['default']) && 'mysql' == $dbConfigs['default']['db']) {
                 initDaoMap('', $dbConfigs['default']); $dbcnt ++;
@@ -49,6 +51,16 @@ try{
     }
 } catch(Exception $ex) {
     echo $ex->getMessage();
+}
+function loadConfig() {
+    $configFile = ROOT_PATH.'common/config/config.php';
+    if(! is_file($configFile)) {
+        echo 'Please perform the initialization framework first.'; exit;
+    }
+    require($configFile);
+    if(! \Config::me()->isDevEnvironment()) {
+        echo 'Current operations can only be performed in a development environment'; exit;
+    }
 }
 /**
  * Bulk copy directory (including all files in subdirectories)
@@ -198,8 +210,9 @@ TP;
             $pk = ('PRI' == strtoupper($result->Key)) ? 1 : 0;
             $notnull = 'NO' == strtoupper($result->Null) ? 1 : 0;
             $autoincremnt = ('AUTO_INCREMENT' == strtoupper($result->Extra)) ? 1 : 0;
+            $default = is_null($result->Default) ? 'NULL' : "'{$result->Default}'";
 
-            $tableInfo .= ($i>0?"\n\t\t\t":"")."array('field'=>'{$result->Field}', 'type'=>'{$type}', 'notnull'=>{$notnull}, 'default'=>'{$result->Default}', 'pk'=>{$pk}, 'autoincremnt'=>{$autoincremnt}),";
+            $tableInfo .= ($i>0?"\n\t\t\t":"")."array('field'=>'{$result->Field}', 'type'=>'{$type}', 'notnull'=>{$notnull}, 'default'=>{$default}, 'pk'=>{$pk}, 'autoincremnt'=>{$autoincremnt}),";
             if($pk) $tbpk = $result->Field;
         }
 
