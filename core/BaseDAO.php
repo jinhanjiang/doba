@@ -119,6 +119,7 @@ class BaseDAO {
             }
             $valuestr .= ($k > 0 ? ',' : '');
             if(is_null($value)) $valuestr .= 'NULL'; 
+            else if('CURRENT_TIMESTAMP' == strtoupper($value)) $valuestr .= "'".date('Y-m-d H:i:s')."'"; 
             else if(is_numeric($value)) $valuestr .= $value;
             else $valuestr .= "'".$value."'";
             $fieldstr .= ($k > 0 ? ',' : '').'`'.$tbinfo['field'].'`';
