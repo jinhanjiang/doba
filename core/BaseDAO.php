@@ -110,23 +110,26 @@ class BaseDAO {
     public function insert($params) 
     {
         $fieldstr = $valuestr = ""; $k=0;
-        foreach($this->tbinfo as $tbinfo) {
-            if($tbinfo['autoincremnt']) continue;
-            $value = $tbinfo['default'];
-            if(isset($params[$tbinfo['field']])) {
+        foreach($this->tbinfo as $tbinfo) 
+        {
+            if(isset($params[$tbinfo['field']])) 
+            {
+                if($tbinfo['autoincremnt'] && '' == $params[$tbinfo['field']) continue;
+
                 $value = $this->escape($params[$tbinfo['field']]);
                 settype($value, $tbinfo['type']);
+
+                $valuestr .= ($k > 0 ? ',' : '');
+                if(is_null($value)) $valuestr .= 'NULL'; 
+                else if('CURRENT_TIMESTAMP' == strtoupper($value)) $valuestr .= "'".date('Y-m-d H:i:s')."'"; 
+                else if(in_array($tbinfo['type'], array('int', 'float')) && is_numeric($value)) $valuestr .= $value;
+                else $valuestr .= "'".$value."'";
+                $fieldstr .= ($k > 0 ? ',' : '').'`'.$tbinfo['field'].'`';
+                $k ++;
             }
-            $valuestr .= ($k > 0 ? ',' : '');
-            if(is_null($value)) $valuestr .= 'NULL'; 
-            else if('CURRENT_TIMESTAMP' == strtoupper($value)) $valuestr .= "'".date('Y-m-d H:i:s')."'"; 
-            else if(is_numeric($value)) $valuestr .= $value;
-            else $valuestr .= "'".$value."'";
-            $fieldstr .= ($k > 0 ? ',' : '').'`'.$tbinfo['field'].'`';
-            $k ++;
         }
         $field = "(".$fieldstr.")"; $value = "(".$valuestr.")";
-        return $this->query("INSERT INTO `{$this->tbname}` {$field} VALUES {$value}");
+        return $k > 0 ? $this->query("INSERT INTO `{$this->tbname}` {$field} VALUES {$value}") : 0;
     }
 
     /**

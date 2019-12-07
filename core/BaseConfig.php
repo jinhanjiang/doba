@@ -73,6 +73,7 @@ class BaseConfig
     }
     
     public function getRedisConfig($key='default') {
+        if(! $this->redisConfigs) $this->setRedisConfigs();
         $redisConfig = isset($this->redisConfigs[$key]) ? $this->redisConfigs[$key] : array();
         if(! $redisConfig) throw new \Exception('['.$key.'] redis connection configuration not found');
         return $redisConfig;
