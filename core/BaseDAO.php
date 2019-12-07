@@ -114,7 +114,7 @@ class BaseDAO {
         {
             if(isset($params[$tbinfo['field']])) 
             {
-                if($tbinfo['autoincremnt'] && '' == $params[$tbinfo['field']) continue;
+                if($tbinfo['autoincremnt'] && '' == $params[$tbinfo['field']]) continue;
 
                 $value = $this->escape($params[$tbinfo['field']]);
                 settype($value, $tbinfo['type']);
