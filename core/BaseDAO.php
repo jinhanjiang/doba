@@ -22,6 +22,7 @@ class BaseDAO {
     private $link = 'default';
     private $tbpk = 'id';
     private $transactions = 0;
+    private $lastQuerySql = '';
 
     protected function __construct($tbname, $options=array())  {
         $this->tbname = $tbname;
@@ -55,9 +56,14 @@ class BaseDAO {
     }
 
     public function query($sql) {
+        $this->lastQuerySql = $sql;
         $result = $this->db->query($sql);
         $this->tbname = $this->originaltbname;
         return $result;
+    }
+
+    public function sql() {
+        return $this->lastQuerySql;
     }
 
     /**
