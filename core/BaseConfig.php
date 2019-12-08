@@ -156,7 +156,7 @@ class BaseConfig
                             "X-Requested-With: XMLHttpRequest",
                             "X-Api-Key: " . API_KEY,
                             "X-Api-Token: " . md5($content.API_SECURE),
-                            "X-Language: " . defined('LANGUAGE') ? LANGUAGE : 'en',
+                            "X-Language: " . (defined('LANGUAGE') ? LANGUAGE : 'en'),
                             "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
                         ))."\r\n",
                         'timeout' => 60,
