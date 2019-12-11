@@ -133,36 +133,57 @@ class BaseConfig
                 preg_match('/^127\.0/', $clientIp)) ? true : false;
     }
 
+    /**
+     * Call the rpc method of the current system. Of course, if other systems are also doba structures, 
+     * we can also be called by passing in related paramseters.
+     */
     public function apiCall($api, $edatas=array(), $options=array())
     {
-        $content = json_encode(
-            array(
-                'api'=>$api,
-                'edatas'=>$edatas,
-                'timestamp'=>time(),
-                'version'=>'v1.0'
-            )
+        $url = $_API_KEY = $_API_SECURE = $_LANGUAGE = '';
+        if(isset($options['_private_configs']))
+        {
+            $rpcHost = $options['_private_configs']['rpcHost'];
+            if(! $rpcHost) return false;
+            $url = preg_match('/^https?:\/\//', $rpcHost) ? $rpcHost : "http://{$rpcHost}/rpc.php";
+
+            $_API_KEY = $options['_private_configs']['apiKey']; $_API_SECURE = $options['_private_configs']['apiSecure']; 
+            $_LANGUAGE = $options['_private_configs']['language'] ? $options['_private_configs']['language'] : 'en';
+        }
+        else
+        {
+            $rpcHost = defined('RPC_HOST') ? RPC_HOST : '';
+            if(! $rpcHost) return false;
+            $url = preg_match('/^https?:\/\//', $rpcHost) ? $rpcHost : "http://{$rpcHost}/rpc.php";    
+
+            $_API_KEY = API_KEY; $_API_SECURE = API_SECURE; $_LANGUAGE = defined('LANGUAGE') ? LANGUAGE : 'en';
+        }
+        $plus = $files = array();
+        // Upload attachments if needed
+        if(isset($options['attach']) && is_array($options['attach'])) {
+            $filecnt = 0;
+            foreach($options['attach'] as $filepath) {
+                if(\Doba\Util::isFile($filepath)) {
+                    $files['file'.$filecnt] = '@'.$filepath; $filecnt ++;
+                }
+            }
+            if($filecnt > 0) $plus['filecnt'] = $filecnt;
+        }
+        $params = array(
+            'api'=>strval($api),
+            'edatas'=>json_encode($plus + $edatas),
+            'timestamp'=>strval(time()),
+            'version'=>'1.0'
         );
-        $rpcHost = defined('RPC_HOST') ? RPC_HOST : '';
-        if(! $rpcHost) return false;
-        $result = file_get_contents("http://{$rpcHost}/rpc.php", 
-            false, 
-            stream_context_create(
-                array(
-                    'http' => array(
-                        'method'  => 'POST',
-                        'header'  => implode("\r\n", array(
-                            "Content-type: application/json",
-                            "X-Requested-With: XMLHttpRequest",
-                            "X-Api-Key: " . API_KEY,
-                            "X-Api-Token: " . md5($content.API_SECURE),
-                            "X-Language: " . (defined('LANGUAGE') ? LANGUAGE : 'en'),
-                            "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
-                        ))."\r\n",
-                        'timeout' => 60,
-                        'content' => $content
-                    )
-                )
+        $content = json_encode($params);
+        $params += $files;
+        $result = \Doba\Util::http($url, $params, 'POST', 
+            array(
+                'header'=>array(
+                    "X-Api-Key: " . $_API_KEY,
+                    "X-Api-Token: " . md5($content.$_API_SECURE),
+                    "X-Language: " . $_LANGUAGE,
+                ), 
+                'attach'=>true,
             )
         );
         $result = @json_decode($result, true);
