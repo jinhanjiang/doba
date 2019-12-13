@@ -15,10 +15,13 @@ namespace Doba;
 class SQL{
     private $inTransaction = false;
     private $link = 0;
+    
     private $sqlite3 = NULL;
     private $pdomysql = NULL;
     private $mysqli = NULL;
+
     private $configs = array();
+    private $retry = 0;
 
     public $dbname = NULL;
 
@@ -73,10 +76,11 @@ class SQL{
             else if (extension_loaded('mysqli'))
             {
                 $this->link = 3;
+                \mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
                 $dbHost = $persistent ? 'p:'.$configs['dbHost'] : $configs['dbHost'];
                 $this->mysqli = $this->mysqli ? $this->mysqli 
                     : new \mysqli($dbHost, $configs['dbUser'], $configs['dbPass'], $configs['dbName'], $port);
-                $this->mysqli->query($initExec);
+                $this->mysqli->options(MYSQLI_INIT_COMMAND, $initExec);
             } else {
                 throw new \Exception('No extension for pdo_mysql or mysqli were found');
             }
@@ -149,10 +153,23 @@ class SQL{
                     break;
             }
             $GLOBALS['QUERY_SQL'] = NULL;
-        } catch(\Exception $ex) {
-            $this->wlog($sql, $ex->getCode().':'.$ex->getMessage());
-            $GLOBALS['QUERY_SQL'] = NULL;
-            throw new \Exception($ex->getMessage(), $ex->getCode());
+            $this->retry = 0;
+        } 
+        catch(\Exception $ex) 
+        {
+            $emessage = $ex->getMessage();
+            if('mysql' == $this->configs['db'] && $this->retry < 10 && 
+                preg_match('/MySQL server has gone away/i', $ex->getMessage())) {
+                $this->close(); $this->connect();
+                $this->retry ++; 
+                return $this->query($sql, $options);
+            }
+            else
+            {
+                $this->wlog($sql, $ex->getCode().':'.$ex->getMessage());
+                $GLOBALS['QUERY_SQL'] = NULL;
+                throw new \Exception($ex->getMessage(), $ex->getCode());
+            }
         }
         return $result;
     }

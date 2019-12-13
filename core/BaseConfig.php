@@ -32,11 +32,11 @@ class BaseConfig
     {
         if(defined('TEMP_PATH') && defined('DEBUG_ERROR')) 
         {
-            $codes = array(); $err_type_map = array(1=>'ERROR', 2=>'WARNING', 4=>'PARSE', 8=>'NOTICE', 16=>'CORE_ERROR', 32=>'CORE_WARNING', 64=>'COMPILE_ERROR', 128=>'COMPILE_WARNING', 256=>'USER_ERROR', 512=>'USER_WARNING', 1024=>'USER_NOTICE', 2047=>'ALL', 2048=>'STRICT', 4069=>'RECOVERABLE_ERROR'); 
+            $codes = array(); $errTypeMap = array(1=>'ERROR', 2=>'WARNING', 4=>'PARSE', 8=>'NOTICE', 16=>'CORE_ERROR', 32=>'CORE_WARNING', 64=>'COMPILE_ERROR', 128=>'COMPILE_WARNING', 256=>'USER_ERROR', 512=>'USER_WARNING', 1024=>'USER_NOTICE', 2047=>'ALL', 2048=>'STRICT', 4069=>'RECOVERABLE_ERROR'); 
             switch(DEBUG_ERROR) {
                 case 'warning': $codes = array(2, 512); break;
                 case 'error': $codes = array(1, 2, 4, 256, 512); break;
-                case 'all': $codes = array_keys($err_type_map); break;
+                case 'all': $codes = array_keys($errTypeMap); break;
             }
             if(in_array($code, $codes) &&  is_dir(TEMP_PATH))
             {
@@ -47,24 +47,49 @@ class BaseConfig
                 }
 
                 $logInfo = array(
-                    'code_num' => $code, 
-                    'code' => $err_type_map[$code],
+                    'code' => $errTypeMap[$code],
                     'message' => $message,
                     'file' => $file,
                     'line' => $line,
-                    'query_sql' => preg_match('/\/core\/SQL\.php/', $file) ? $GLOBALS['QUERY_SQL'] : '',
+                    'query_sql' => preg_match('/doba\/core\/SQL\.php/', $file) ? $GLOBALS['QUERY_SQL'] : '',
                 );
 
                 $isRecord = true;
-                if(is_callable('filterSysLog') && false === call_user_func_array("filterSysLog", array($logInfo))) $isRecord = false;
+                if(is_callable(array($this, 'filterSysLog')) && 
+                    false === call_user_func_array(array($this, "filterSysLog"), array($logInfo))) $isRecord = false;
                 if(true === $GLOBALS['STOP_SYS_LOG']) $isRecord = false;
 
                 if($logInfo['query_sql']) $message .= '('.$logInfo['query_sql'].')';
 
                 $isRecord && file_put_contents($syslog, PHP_EOL.date('Y-m-d H:i:s').
-                    '['.$from.']['.$err_type_map[$code].']['.$message.']['.$file.']['.$line.']', 8);
+                    '['.$from.']['.$errTypeMap[$code].']['.$message.']['.$file.']['.$line.']', 8);
             }
         }   
+    }
+
+    /**
+     * Here you can ignore processed log messages
+     * For example: 
+     * 
+     * mysql warning: MySQL server has gone away
+     * The above error is caused by the database link timeout and has been processed in the current framework code.
+     * When the above situation occurs, the database will be reconnected once, and the unsuccessfull SQL is executed
+     *
+     * Although the framework has dealt with the problem, Warning will still be captured by the system and recorded in the log 
+     * by the above method, which is unnecessary. So here you can define processed warning without logging
+     * 
+     * @param $logInfo array('code', 'message', 'file', 'line', 'query_sql')
+     */
+    public function filterSysLog($logInfo = array()) 
+    {
+        if(preg_match('/doba\/core\/SQL\.php/i', $logInfo['file']))
+        {
+            if('WARNING' == $logInfo['code']) {
+                if(preg_match('/MySQL server has gone away/i', $logInfo['message'])) return false;
+                if(preg_match('/Error reading result set\'s header/i', $logInfo['message'])) return false;
+            }
+        }
+        return true;
     }
 
     public function shutdownFunction() {
@@ -89,13 +114,14 @@ class BaseConfig
 
     public function getDb($key='default', $option=array()) {
         $reconnect = isset($option['reconnect']) && true === $option['reconnect'] ? true : false;
-        if(! $GLOBALS[$key.'db'] || $reconnect) {
+        $ckey = (PHP_SAPI === 'cli') ? $key.getmypid() : $key;
+        if(! $GLOBALS[$ckey.'db'] || $reconnect) {
             $dbConfigs = $this->getDbConfigs();
             $dbConfig = isset($dbConfigs[$key]) ? $dbConfigs[$key] : array();
             if(! $dbConfig) throw new \Exception('['.$key.'] database connection configuration not found');
-            $GLOBALS[$key.'db'] = new \Doba\SQL($dbConfig);
+            $GLOBALS[$ckey.'db'] = new \Doba\SQL($dbConfig);
         }
-        return $GLOBALS[$key.'db'];
+        return $GLOBALS[$ckey.'db'];
     }
 
     // Database link not set, default is mysql

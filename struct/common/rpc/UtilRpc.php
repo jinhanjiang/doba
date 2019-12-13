@@ -6,7 +6,7 @@ class UtilRpc
     public function __construct() {
     }
 
-    public function pong($params) {
-        echo 'pong';
+    public function ping($params) {
+        return 'pong';
     }
 }

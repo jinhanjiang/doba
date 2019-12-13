@@ -1,3 +1,20 @@
-*.DS_Store
+# This is a comment - will be ignored by Git.
+# 
+# *.a        Ignore all.a files.
+# !lib.a     Except the lib.a
+# /TODO      Only ignore TODO files in project root, excluding subdir/TODO
+# build/     Ignore all files in the build/ directory
+# doc/*.txt  Ignore doc/notes.txt but not doc/server/arch.txt
+
+
+# General ignore
+.DS_Store
+.project
+.idea
 *.tmp
+*.bak
 *.log
+*.pid
+*.txt
+
+# Ignore files

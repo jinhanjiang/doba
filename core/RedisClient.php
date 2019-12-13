@@ -28,11 +28,12 @@ class RedisClient {
     }
 
 
-    public static function me($key='default'){
-        if(! self::$instance[$key]) {
-            self::$instance[$key] = new self($key);
+    public static function me($key='default') {
+        $ckey = (PHP_SAPI === 'cli') ? $key.getmypid() : $key;
+        if(! self::$instance[$ckey]) {
+            self::$instance[$ckey] = new self($key);
         }
-        return self::$instance[$key];
+        return self::$instance[$ckey];
     }
 
     /**
