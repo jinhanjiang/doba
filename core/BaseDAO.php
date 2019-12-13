@@ -221,7 +221,13 @@ class BaseDAO {
                             $op = '<'; $vescape = true; 
                         } else if('in' == $op) {
                             $op = 'IN'; $valueText = "({$valueText})";
-                        }else if('like' == $op) $op = 'LIKE';
+                        } 
+                        else if('like' == $op) 
+                        {
+                            $op = 'LIKE'; $vescape = true;
+                            $valueText = preg_match('/^%/', $valueText) || preg_match('/%$/', $valueText) 
+                                ? $valueText : "%{$valueText}%";
+                        } 
                         else if('custom' == $op) {
                             $op = $field = ''; $valueText = "({$valueText})";
                         } else {
@@ -229,7 +235,7 @@ class BaseDAO {
                         }
                         if($vescape) $valueText = "'".$this->escape($valueText)."'"; 
                         if($field) $field = "`{$field}`";
-                        $sql .= " {$and} {$field}{$op}{$valueText}";
+                        $sql .= " {$and} {$field} {$op} {$valueText}";
                     }
                 }
                 else if(is_scalar($value) && '' !== $value) {

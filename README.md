@@ -378,10 +378,13 @@ array('and'=>true, 'op'=>'=', 'value'=>'')
 # 条件查询
 \Doba\Dao\Db1\AccountDAO::me()->finds(
     array(
-        'name'=>array('op'=>'like', 'value'=>"doba"),
+        'name'=>array('op'=>'like', 'value'=>"doba"), 
     )
 );
 # SQL语句: SELECT * FROM `Account` WHERE 1=1 AND `name` LIKE '%doba%')
+
+当'name'=>array('op'=>'like', 'value'=>"doba%"), 
+# SQL语句: SELECT * FROM `Account` WHERE 1=1 AND `name` LIKE 'doba%')
 
 
 \Doba\Dao\Db1\AccountDAO::me()->finds(
