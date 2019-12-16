@@ -116,9 +116,6 @@ class SQL{
                         if(preg_match('/^INSERT/i', $sql)) {
                             $result = $this->sqlite3->lastInsertRowID();
                         } else if(preg_match('/^(UPDATE|DELETE|CREATE)/i', $sql) || 1 == $options['noReturn']) {}
-                        else {
-                            $this->wlog($sql, 'Execute SQL exception. line: '.__LINE__);
-                        }
                     }
                     break;
 
@@ -129,9 +126,6 @@ class SQL{
                     else if(preg_match('/^(SELECT|CALL|EXPLAIN|SHOW|DESC)/i', $sql)) {
                         $stmt->setFetchMode(\PDO::FETCH_ASSOC);
                         $result = $stmt->fetchAll(\PDO::FETCH_CLASS);
-                    }
-                    else {
-                        $this->wlog($sql, 'Execute SQL exception. line: '.__LINE__);
                     }
                     break;
 
@@ -146,9 +140,6 @@ class SQL{
                             }
                         }
                         //$stmt->close(); //please do not set this call, it's will affect result return
-                    }
-                    else {
-                        $this->wlog($sql, 'Execute SQL exception. line: '.__LINE__);
                     }
                     break;
             }
