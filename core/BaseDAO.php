@@ -217,8 +217,8 @@ class BaseDAO {
                             $op = '<='; $vescape = true; 
                         } else if('<' == $op || 'lt'== $op) {
                             $op = '<'; $vescape = true; 
-                        } else if('<>' == $op || '!='== $op) {
-                            $op = '<'; $vescape = true; 
+                        } else if('<>' == $op || '!='== $op || 'neq'== $op) {
+                            $op = '!='; $vescape = true; 
                         } else if('in' == $op) {
                             $op = 'IN'; $valueText = "({$valueText})";
                         } 
