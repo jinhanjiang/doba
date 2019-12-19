@@ -128,7 +128,9 @@ class BaseDAO {
                 $valuestr .= ($k > 0 ? ',' : '');
                 if(is_null($value)) $valuestr .= 'NULL'; 
                 else if('CURRENT_TIMESTAMP' == strtoupper($value)) $valuestr .= "'".date('Y-m-d H:i:s')."'"; 
-                else if(in_array($tbinfo['type'], array('int', 'float')) && is_numeric($value)) $valuestr .= $value;
+                else if(in_array($tbinfo['type'], array('int', 'float'))) {
+                    $valuestr .= ('' == $value) ? (is_null($tbinfo['default']) ? (int)$value : $tbinfo['default']): $value;
+                }
                 else $valuestr .= "'".$value."'";
                 $fieldstr .= ($k > 0 ? ',' : '').'`'.$tbinfo['field'].'`';
                 $k ++;
@@ -205,14 +207,14 @@ class BaseDAO {
                     if(isset($value['value']) && is_scalar($value['value']) && '' !== $value['value'])
                     {
                         // array('and'=>false, 'op'=>'=', 'value'=>'')
-                        // op: [eq =], [geq, >=], [gt, >], [leq, <=], [lt, <], [<>, !=], in, not in ,like, [custom]
+                        // op: [eq =], [geq, >=], [gt, >], [leq, <=], [lt, <], [<>, !=, neq], in, not in ,like, [custom]
                         $valueText = $value['value']; $vescape = false;
                         $and = isset($value['and']) && false === $value['and'] ? 'OR' : 'AND';
                         $op = strtolower($value['op']);
                         if('>=' == $op || 'geq'== $op) { 
                             $op = '>='; $vescape = true; 
                         } else if('>' == $op || 'gt'== $op) { 
-                            $op = '>='; $vescape = true; 
+                            $op = '>'; $vescape = true; 
                         } else if('<=' == $op || 'leq'== $op) {
                             $op = '<='; $vescape = true; 
                         } else if('<' == $op || 'lt'== $op) {
@@ -253,6 +255,11 @@ class BaseDAO {
                 $sql .= " AND `{$field}`<'".$this->escape($params[$field.'Lt'])."'";
             } if(isset($params[$field.'Neq']) && '' !== $params[$field.'Neq']) {
                 $sql .= " AND `{$field}`!='".$this->escape($params[$field.'Neq'])."'";
+            } if(isset($params[$field.'In']) && ! is_null($params[$field.'In'])) {
+                if(is_array($params[$field.'In'])) $params[$field.'In'] = $params[$field.'In'] ? "'".implode("','", $params[$field.'In'])."'" : '';
+                if('' != $params[$field.'In']) {
+                    $sql .= " AND `{$field}` IN (".$params[$field.'In'].")";
+                }
             }
         }
         $sqlWithOutLimit = $sql." {$groupByStr} {$orderByStr}";

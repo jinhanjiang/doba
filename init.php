@@ -204,8 +204,8 @@ TP;
         $tableInfo = ""; $tbpk = "";
         $results = $db->query("DESC `{$table['tableName']}`");
         if(is_array($results)) foreach($results as $i=>$result) {
-            if(preg_match('/int/i', $result->type)) $type = 'int';  
-            else if(preg_match('/(float|double|decimal)/i', $result->type)) $type = 'float';
+            if(preg_match('/int/i', $result->Type)) $type = 'int';  
+            else if(preg_match('/(float|double|decimal)/i', $result->Type)) $type = 'float';
             else $type = 'string';
             $pk = ('PRI' == strtoupper($result->Key)) ? 1 : 0;
             $notnull = 'NO' == strtoupper($result->Null) ? 1 : 0;
