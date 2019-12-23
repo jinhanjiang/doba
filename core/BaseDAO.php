@@ -153,8 +153,16 @@ class BaseDAO {
             $data[] = "`{$field}`='".$this->escape($value)."'";
         }
         $setConds = implode(',', $data);
-        $this->query("UPDATE `{$this->tbname}` SET {$setConds} WHERE `{$this->tbpk}`='{$pk}'");
-        return $pk;
+
+        $where = ''; $id = 0;
+        if(is_array($pk)) {
+            $sql = $this->where($pk);
+            $where = $sql ? "WHERE ".$sql : '';
+        } else {
+            $where = "WHERE `{$this->tbpk}`='{$pk}'"; $id = $pk;
+        }
+        $this->query("UPDATE `{$this->tbname}` SET {$setConds} {$where}");
+        return $id;
     }
 
     /**
@@ -171,7 +179,14 @@ class BaseDAO {
      */
     public function delete($id=0) 
     {
-        $this->query("DELETE FROM `{$this->tbname}` WHERE `{$this->tbpk}`='{$id}'");
+        $where = '';
+        if(is_array($id)) {
+            $sql = $this->where($id);
+            $where = $sql ? "WHERE ".$sql : '';
+        } else {
+            $where = "WHERE `{$this->tbpk}`='{$id}'";
+        }
+        $this->query("DELETE FROM `{$this->tbname}` {$where}");
     }
 
     /**
@@ -195,8 +210,18 @@ class BaseDAO {
         }
         $selectCase = $params['selectCase'] ? $params['selectCase'] : '*';
 
-        $sql = "SELECT {$selectCase} FROM `{$this->tbname}` WHERE 1=1"; $newSql = '';
-        $fields = array_column($this->tbinfo, 'field');
+        $where = $this->where($params);
+        $sql = "SELECT {$selectCase} FROM `{$this->tbname}` ".($where ? "WHERE ".$where : "");
+        
+        $sqlWithOutLimit = $sql." {$groupByStr} {$orderByStr}";
+        $sql .= " {$groupByStr} {$orderByStr} {$limitStr}";
+        
+        return $this->query($sql);
+    }
+
+    private function where($params)
+    {
+        $sql = ''; $fields = array_column($this->tbinfo, 'field');
         foreach($fields as $field) 
         {
             if(isset($params[$field])) 
@@ -262,10 +287,7 @@ class BaseDAO {
                 }
             }
         }
-        $sqlWithOutLimit = $sql." {$groupByStr} {$orderByStr}";
-        $sql .= " {$groupByStr} {$orderByStr} {$limitStr}";
-        
-        return $this->query($sql);
+        return preg_replace('/^\s*(and|or)/i', '', $sql);
     }
 
     public function findCount($params)

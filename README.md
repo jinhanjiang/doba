@@ -1,5 +1,5 @@
 
-QQ讨论群:27757038
+程序可运行在PHP5.6+, PHP7+以上版本，如果运行中遇到问题，请加QQ讨论群:27757038，反馈
 
 # 一 框架结构
 
@@ -285,12 +285,25 @@ return array(
 ```
 
 ### 2 删除数据库数据
+
+通过主键删除
 ```
 \Doba\Dao\Db1\AccountDAO::me()->delete(1);
 
-# 解释:通过查看\Doba\BaseDao.php可以知道， 数据库表当中有一个主键(primary key), 
-在创建表结构时，可自定义，Doba框架默认为这个值为id, 当然你的表结构不是这个值，可以初始化Dao的时候修改这个值
+echo \Doba\Dao\Db1\AccountDAO::me()->sql(); // 查看执行sql
 ```
+解释:通过查看\Doba\BaseDao.php可以知道， 数据库表当中有一个主键(primary key), 
+在创建表结构时，可自定义，Doba框架默认为这个值为id, 当然你的表结构不是这个值，可以初始化Dao的时候修改这个值
+
+
+通过多个条件删除
+```
+\Doba\Dao\Db1\AccountDAO::me()->delete(array('source'=>1, 'nameLike'=>'doba'));
+
+\Doba\Dao\Db1\AccountDAO::me()->delete(array()); # 删除所有数据
+```
+传入数组条件，格式请看下面finds条件传参格式 
+
 
 ### 3 查询数据库数据
 
@@ -473,6 +486,7 @@ while (true) {
 
 ### 4 更新数据库数据
 
+通过主键更新数据
 ```
 \Doba\Dao\Db1\AccountDAO::me()->change(
     1, // 注意这里，(重点), 这个值是主键值
@@ -486,6 +500,24 @@ while (true) {
         'createTime'=>date('Y-m-d H:i:s'),
     )
 );
+```
+
+通过条件更新数据
+```
+\Doba\Dao\Db1\AccountDAO::me()->change(
+    array('source'=>1, 'nameLike'=>'doba'),
+    array(
+        'username'=>'doba', 
+        'password'=>'123456',
+        'source'=>1,
+        'otherId'=>12345,
+        'name'=>'doba',
+        'nick'=>'xiao ming',
+        'createTime'=>date('Y-m-d H:i:s'),
+    )
+);
+
+echo \Doba\Dao\Db1\AccountDAO::me()->sql();
 ```
 
 ### 5 数据库事务提交

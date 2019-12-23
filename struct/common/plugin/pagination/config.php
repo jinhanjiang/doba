@@ -41,6 +41,12 @@ class PaginationPlugin extends BasePlugin {
     // Selected page style
     public $selectPageCss = "active";
 
+    // Js pagination method on the page
+    public $getPaginationData = '';
+
+    // Other conditions
+    public $additional = '';
+
     public function __construct(&$plugin){ 
         $this->_install($plugin, $this);
     }
@@ -48,11 +54,20 @@ class PaginationPlugin extends BasePlugin {
     /**
      * Initial page
      */
-    public function start() {
+    public function start($params = array()) {
         if(isset($_REQUEST[$this->pageName]) && $_REQUEST[$this->pageName] > 0){
             $this->currentPage = intval($_REQUEST[$this->pageName]);
         } else {
             $this->currentPage = 1;    
+        }
+        // Ajax method called on the page
+        if($params['callFunction']) $this->getPaginationData = $params['callFunction'];
+
+        // Other paramenters passed in the method in the click event
+        if(isset($params['additional'])) {
+            $additional = is_array($params['additional']) && count($params['additional']) 
+                ? array_values($params['additional']) : array();
+            $this->additional = count($additional) > 0 ? ','.implode(',', $additional) : '';
         }
         return $this;
     }
@@ -113,8 +128,12 @@ class PaginationPlugin extends BasePlugin {
      */
     private function geturl($pageno = 1)
     {
-        if(empty($this->linkurl))$this->getLinkUrl();
-        return str_replace($this->pageName.'=', $this->pageName.'='.$pageno, $this->linkurl);
+        if($this->getPaginationData) {
+            return 'javascript:'.$this->getPaginationData.'('.$pageno.$this->additional.')';
+        } else {
+            if(empty($this->linkurl))$this->getLinkUrl();
+            return str_replace($this->pageName.'=', $this->pageName.'='.$pageno, $this->linkurl);
+        }
     }
 
     /**
