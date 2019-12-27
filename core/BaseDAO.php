@@ -129,7 +129,7 @@ class BaseDAO {
                 if(is_null($value)) $valuestr .= 'NULL'; 
                 else if('CURRENT_TIMESTAMP' == strtoupper($value)) $valuestr .= "'".date('Y-m-d H:i:s')."'"; 
                 else if(in_array($tbinfo['type'], array('int', 'float'))) {
-                    $valuestr .= ('' == $value) ? (is_null($tbinfo['default']) ? (int)$value : $tbinfo['default']): $value;
+                    $valuestr .= ('' === $value) ? (is_null($tbinfo['default']) ? (int)$value : $tbinfo['default']): $value;
                 }
                 else $valuestr .= "'".$value."'";
                 $fieldstr .= ($k > 0 ? ',' : '').'`'.$tbinfo['field'].'`';
