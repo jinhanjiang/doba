@@ -328,7 +328,7 @@ class BaseDAO {
     }
 
     public function escape($value) {
-        return is_null($value) ? NULL : (is_numeric($value) ? $value : str_replace(array("'"), array("''"), $value));
+        return is_null($value) ? NULL : (is_numeric($value) ? $value : str_replace(array("'", "\\"), array("''", "\\\\"), $value));
     }
 
 }

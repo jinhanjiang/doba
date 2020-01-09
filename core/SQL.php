@@ -175,7 +175,7 @@ class SQL{
     }
 
     public function escape($value) {
-        return is_null($value) ? NULL : (is_int($value) ? $value : str_replace(array("'"), array("''"), $value));
+        return is_null($value) ? NULL : (is_numeric($value) ? $value : str_replace(array("'", "\\"), array("''", "\\\\"), $value));
     }
 
     /**
