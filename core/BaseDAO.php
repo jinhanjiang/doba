@@ -292,14 +292,11 @@ class BaseDAO {
 
     public function findCount($params)
     {
-        unset($params['limit'], $params['orderBy']);
+        $groupbyFirstField = false !== ($pos = stripos($params['groupBy'], ',')) 
+            ? trim(substr($params['groupBy'], 0, $pos)) : $params['groupBy'];
 
-        $groupBy = '';
-        if(! empty($params['groupBy'])) {
-            $groupBy = "GROUP BY {$params['groupBy']}";
-        }
-        $firstField = false !== ($pos = stripos($groupBy, ',')) ? trim(substr($groupBy, 0, $pos)) : $groupBy;
-        $params['selectCase'] = empty($groupBy) ? 'COUNT(*) AS `cnt`' : 'COUNT(DISTINCT '.$firstField.') AS `cnt`';
+        unset($params['groupBy'], $params['limit'], $params['orderBy']);
+        $params['selectCase'] = empty($groupbyFirstField) ? 'COUNT(*) AS `cnt`' : 'COUNT(DISTINCT '.$groupbyFirstField.') AS `cnt`';
         
         $objs = $this->finds($params);
         return isset($objs[0]) ? $objs[0]->cnt : 0;
