@@ -150,7 +150,10 @@ class BaseDAO {
         $data = array(); $columns = array_column($this->tbinfo, 'field');
         foreach($params as $field=>$value) {
             if(! in_array($field, $columns)) continue;
-            $data[] = "`{$field}`='".$this->escape($value)."'";
+            if(is_null($value)) $data[] = "`{$field}`=NULL";
+            else {
+                $data[] = "`{$field}`='".$this->escape($value)."'";
+            }
         }
         $setConds = implode(',', $data);
 
