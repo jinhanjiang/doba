@@ -136,8 +136,9 @@ class BaseDAO {
                 $k ++;
             }
         }
+        $insertIgonre = isset($params['_INSERT_IGONRE']) && true === $params['_INSERT_IGONRE'] ? 'IGNORE ' : '';
         $field = "(".$fieldstr.")"; $value = "(".$valuestr.")";
-        return $k > 0 ? $this->query("INSERT INTO `{$this->tbname}` {$field} VALUES {$value}") : 0;
+        return $k > 0 ? $this->query("INSERT {$insertIgonre}INTO `{$this->tbname}` {$field} VALUES {$value}") : 0;
     }
 
     /**
