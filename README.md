@@ -284,6 +284,29 @@ return array(
 );
 ```
 
+如果已经存在相同记录，忽略当前新数据(有唯一主键值的数据，在表中存在)
+```
+# 可以在DAO中重写insert方法
+class AccountDAO extends BaseDAO {
+    ...
+
+    public function insert($params) {
+        /*
+         * 在这里也可以初始化一些其他的默认值，后面在调用当前方法就不再再传了
+         *  例如: 创建时间(createTime) 
+        return parent::insert([
+            '_INSERT_IGONRE'=>true, 
+            'createTime'=>date('Y-m-d H:i:s')
+        ] + $params);
+         */
+
+        return parent::insert(['_INSERT_IGONRE'=>true] + $params);
+    }
+
+    ...
+}
+```
+
 ### 2 删除数据库数据
 
 通过主键删除
