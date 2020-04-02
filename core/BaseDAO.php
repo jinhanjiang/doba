@@ -223,7 +223,7 @@ class BaseDAO {
         return $this->query($sql);
     }
 
-    private function where($params)
+    protected function where($params)
     {
         $sql = ''; $fields = array_column($this->tbinfo, 'field');
         foreach($fields as $field) 
