@@ -18,7 +18,7 @@ class BaseDAO {
     protected $tbname;
     protected $originaltbname;
     protected $tbinfo = array();
-    private $sp = '';
+    protected $sp = '';
     private $link = 'default';
     private $tbpk = 'id';
     private $transactions = 0;
