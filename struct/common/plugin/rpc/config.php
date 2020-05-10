@@ -106,7 +106,7 @@ class RpcPlugin extends BasePlugin {
     /**
      * Methods are called before data is returned to the client
      */
-    private function ccc() {// clear call cache
+    private function ccc($_TEMP_FILES=array()) {// clear call cache
         // 1 If there is an uploaded file, the temporary file will be deleted after the request
         if(is_array($_TEMP_FILES)) foreach($_TEMP_FILES as $tfile) {
             if(Util::isFile($tfile)) @unlink($tfile);
