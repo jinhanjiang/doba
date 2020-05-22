@@ -194,11 +194,12 @@ class BaseConfig
             }
             if($filecnt > 0) $plus['filecnt'] = $filecnt;
         }
+        $version = isset($options['version']) ? $options['version'] : '1.0';
         $params = array(
             'api'=>strval($api),
             'edatas'=>json_encode($plus + $edatas),
             'timestamp'=>strval(time()),
-            'version'=>'1.0'
+            'version'=>$version
         );
         $content = json_encode($params);
         $params += $files;
