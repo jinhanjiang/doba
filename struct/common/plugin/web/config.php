@@ -97,7 +97,7 @@ class WebPlugin extends BasePlugin {
         } else {
             $_IS_HTTPS = isset($_SERVER) && ('on'==$_SERVER['HTTPS'] || 'https'==$_SERVER['HTTP_X_FORWARDED_PROTO']) ? true : false;
             $scriptName = dirname($_SERVER['SCRIPT_NAME']);
-            $scriptName = ('/'==$scriptName ? '' : $scriptName)."/{$rootFile}";
+            $scriptName = (DIRECTORY_SEPARATOR==$scriptName ? '' : $scriptName)."/{$rootFile}";
             $scriptUrl = ($_IS_HTTPS ? 'https':'http').'://'.$_SERVER['SERVER_NAME'].$scriptName;
         }
         return $scriptUrl;
