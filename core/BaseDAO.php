@@ -236,7 +236,7 @@ class BaseDAO {
                     if(isset($value['value']) && is_scalar($value['value']) && '' !== $value['value'])
                     {
                         // array('and'=>false, 'op'=>'=', 'value'=>'')
-                        // op: [eq =], [geq, >=], [gt, >], [leq, <=], [lt, <], [<>, !=, neq], in, not in ,like, [custom]
+                        // op: [eq =], [geq, >=], [gt, >], [leq, <=], [lt, <], [<>, !=, neq], in, nin(not in) ,like, [custom]
                         $valueText = $value['value']; $vescape = false;
                         $and = isset($value['and']) && false === $value['and'] ? 'OR' : 'AND';
                         $op = strtolower($value['op']);
@@ -252,6 +252,8 @@ class BaseDAO {
                             $op = '!='; $vescape = true; 
                         } else if('in' == $op) {
                             $op = 'IN'; $valueText = "({$valueText})";
+                        } else if('nin' == $op) {
+                            $op = 'NOT IN'; $valueText = "({$valueText})";
                         } 
                         else if('like' == $op) 
                         {

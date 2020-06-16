@@ -398,7 +398,7 @@ array('and'=>true, 'op'=>'=', 'value'=>'')
 
 其中op，有多种传值方式
 ```
-[eq =], [geq, >=], [gt, >], [leq, <=], [lt, <], [<>, !=], in, not in ,like, [custom]
+[eq =], [geq, >=], [gt, >], [leq, <=], [lt, <], [<>, !=], in, nin(not in) ,like, [custom]
 ```
 
 我来拿实际的例子来看一下
