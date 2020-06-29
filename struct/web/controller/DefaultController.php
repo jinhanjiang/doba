@@ -34,7 +34,7 @@ class DefaultController extends BaseController
     }
 
     public function error($errorMsg) {
-        echo $errorMsg;
+        echo htmlspecialchars($errorMsg);
     }
 
     public function login() {
