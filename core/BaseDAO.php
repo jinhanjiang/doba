@@ -19,10 +19,10 @@ class BaseDAO {
     protected $originaltbname;
     protected $tbinfo = array();
     protected $sp = '';
+    protected $lastQuerySql = '';
     private $link = 'default';
     private $tbpk = 'id';
     private $transactions = 0;
-    private $lastQuerySql = '';
 
     protected function __construct($tbname, $options=array())  {
         $this->tbname = $tbname;
