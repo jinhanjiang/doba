@@ -109,7 +109,7 @@ class WebPlugin extends BasePlugin {
     public static function getLANG($params=array())
     {
         // Get mulitilingual Setting
-        if(isset($_REQUEST['HTTP_X_LANGUAGE'])) $lang = $_REQUEST['HTTP_X_LANGUAGE'];
+        if(isset($_SERVER['HTTP_X_LANGUAGE'])) $lang = $_SERVER['HTTP_X_LANGUAGE'];
         else
         {
             $lang = Cookie::me()->key('MULTI_LANGUAGE')->get('MULTI_LANGUAGE_TYPE');
