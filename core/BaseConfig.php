@@ -145,6 +145,7 @@ class BaseConfig
     public function initDaoMapConfig() {
         return array(
             // Tables ignored when generating tables dao and map
+            'MATCHED_TABLES'=>array(),
             'IGNORED_TABLES'=>array('/^\w+_\d+$/i', '/^\w+\d+$/i'),
             'IGNORED_TABLES_PREFIX'=>array(),
         );

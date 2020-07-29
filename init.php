@@ -111,6 +111,10 @@ function initDaoMap($project, $dbConfig)
     {
         $tableName = current($datas[$i]); $daoName = $tableName; 
         $invalidTablename = false;
+        if(is_array($initConfig['MATCHED_TABLES'])) 
+            foreach($initConfig['MATCHED_TABLES'] as $regular) {
+            if(! preg_match($regular, $tableName)) continue 2;
+        }
         if(is_array($initConfig['IGNORED_TABLES'])) 
             foreach($initConfig['IGNORED_TABLES'] as $regular) {
             if(preg_match($regular, $tableName)) {

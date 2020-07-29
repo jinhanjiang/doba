@@ -91,7 +91,7 @@ class PaginationPlugin extends BasePlugin {
      */
     public function setPageTotal($total=0)
     {   
-        $this->total = $total;
+        $this->total = (int)$total;
         $this->totalPage = ceil($this->total / $this->perPage);     
     }
 

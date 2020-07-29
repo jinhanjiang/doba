@@ -71,7 +71,7 @@ class RpcPlugin extends BasePlugin {
                     $version = preg_replace('/[^(\d|\.)]/', '', $_FILTER['version']);
                     if("2.0" == $version) {
                         if(is_callable('rpcRequestAuth')) $isAuthSuccess = call_user_func_array("rpcRequestAuth", array($httpHeaders, $contentJson));
-                        else throw new Exception('RPC authentication method not defined', 1008);
+                        else throw new \Exception('RPC authentication method not defined', 1008);
                     }
                     else
                     {
