@@ -19,6 +19,7 @@ class SQL{
     private $sqlite3 = NULL;
     private $pdomysql = NULL;
     private $mysqli = NULL;
+    private $oci8 = NULL;
 
     private $configs = array();
     private $retry = 0;
@@ -85,6 +86,27 @@ class SQL{
                 throw new \Exception('No extension for pdo_mysql or mysqli were found');
             }
             $this->dbname = $configs['db'];
+        } else if('oracle' == $configs['db']) {
+            $persistent = isset($configs['persistent']) && $configs['persistent'] === true ? TRUE : FALSE;
+            $charset = isset($configs['charset']) ? $configs['charset'] : 'AL32UTF8';
+            if (extension_loaded('oci8')) {
+                $this->link = 4;
+                $this->oci8 = $this->oci8 ? $this->oci8 : (
+                    $persistent ? oci_connect(
+                        $configs['dbUser'], 
+                        $configs['dbPass'], 
+                        "{$configs['dbHost']}/{$configs['dbName']}",
+                        $charset
+                    ) : oci_pconnect(
+                        $configs['dbUser'], 
+                        $configs['dbPass'], 
+                        "{$configs['dbHost']}/{$configs['dbName']}",
+                        $charset
+                    )
+                );
+            } else {
+                throw new \Exception('No extension for oracle were found');
+            }
         } else {
             throw new \Exception('There are no database extension to load');
         }
@@ -140,6 +162,27 @@ class SQL{
                             }
                         }
                         //$stmt->close(); //please do not set this call, it's will affect result return
+                    }
+                    break;
+
+                case 4:// oci8
+                    if($stmt = oci_parse($this->oci8, $sql)){
+                        if(oci_execute($stmt)) {
+                            if(preg_match('/^INSERT/i', $sql)) {
+                                if($options['sequence']) { // 
+                                    $nsql = "SELECT {$options['sequence']}.CURRVAL from dual";
+                                    $objs = $this->query($nsql);
+                                    $result = (int)$objs['CURRVAL'];
+                                } 
+                            }
+                            else if(preg_match('/^(UPDATE|DELETE)/i', $sql) || 1 == $options['noReturn']){}
+                            else if(preg_match('/^(SELECT)/i', $sql)) {
+                                $result = array();
+                                while(($row = oci_fetch_assoc($stmt)) !== false) {
+                                    $result[] = (object)$row;
+                                }
+                            }
+                        }
                     }
                     break;
             }
@@ -244,6 +287,7 @@ class SQL{
         $this->sqlite3 = NULL;
         $this->pdomysql = NULL;
         $this->mysqli = NULL;
+        $this->oci8 = NULL;
         $this->link = 0;
     }
 
