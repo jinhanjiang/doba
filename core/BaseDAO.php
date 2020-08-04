@@ -209,7 +209,7 @@ class BaseDAO {
             $orderByStr = "ORDER BY {$params['orderBy']}";
         }
         $limitStr = '';
-        if(! empty($params['limit'])) {
+        if(preg_match('/^\d+(,\d+)*$/', $params['limit'])) {
             $limitStr = "LIMIT {$params['limit']}";
         }
         $selectCase = $params['selectCase'] ? $params['selectCase'] : '*';
