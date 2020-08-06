@@ -92,12 +92,12 @@ class SQL{
             if (extension_loaded('oci8')) {
                 $this->link = 4;
                 $this->oci8 = $this->oci8 ? $this->oci8 : (
-                    $persistent ? oci_connect(
+                    $persistent ? oci_pconnect(
                         $configs['dbUser'], 
                         $configs['dbPass'], 
                         "{$configs['dbHost']}/{$configs['dbName']}",
                         $charset
-                    ) : oci_pconnect(
+                    ) : oci_connect(
                         $configs['dbUser'], 
                         $configs['dbPass'], 
                         "{$configs['dbHost']}/{$configs['dbName']}",
