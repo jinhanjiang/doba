@@ -42,6 +42,14 @@ class BaseDAO {
         return self::$instance[$class];
     }
 
+    public static function resetalldb() { 
+        $db = \Config::me()->getDb($this->link, array('reconnect'=>true)); 
+        if(is_array(self::$instance))
+            foreach(self::$instance as $classobj) {
+            $classobj->setdb($db);
+        }
+        return true;
+    }
     public function resetdb() { 
         $this->db = \Config::me()->getDb($this->link, array('reconnect'=>true)); 
     }
