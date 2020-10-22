@@ -57,8 +57,10 @@ class PaginationPlugin extends BasePlugin {
     public function start($params = array()) {
         // Customize current page request field
         if($params['pageName']) $this->pageName = $params['pageName'];
-        if(isset($_REQUEST[$this->pageName]) && $_REQUEST[$this->pageName] > 0){
-            $this->currentPage = intval($_REQUEST[$this->pageName]);
+        if(isset($_GET[$this->pageName]) && $_GET[$this->pageName] > 0){
+            $this->currentPage = intval($_GET[$this->pageName]);
+        } else if(isset($_POST[$this->pageName]) && $_POST[$this->pageName] > 0){
+            $this->currentPage = intval($_POST[$this->pageName]);
         } else {
             $this->currentPage = 1;    
         }
