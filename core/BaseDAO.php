@@ -296,6 +296,11 @@ class BaseDAO {
                 if('' != $params[$field.'In']) {
                     $sql .= " AND `{$field}` IN (".$params[$field.'In'].")";
                 }
+            } if(isset($params[$field.'Nin']) && ! is_null($params[$field.'Nin'])) {
+                if(is_array($params[$field.'Nin'])) $params[$field.'Nin'] = $params[$field.'Nin'] ? "'".implode("','", $params[$field.'Nin'])."'" : '';
+                if('' != $params[$field.'Nin']) {
+                    $sql .= " AND `{$field}` NOT IN (".$params[$field.'Nin'].")";
+                }
             }
         }
         return preg_replace('/^\s*(and|or)/i', '', $sql);
