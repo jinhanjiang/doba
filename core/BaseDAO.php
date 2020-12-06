@@ -219,8 +219,20 @@ class BaseDAO {
         }
         $selectCase = $params['selectCase'] ? $params['selectCase'] : '*';
 
+        $joinConds = array();
+        $params['joinConds'] = (array)$params['joinConds'];
+        if(is_array($params['joinConds']))
+            foreach($params['joinConds'] as $joinCond) {
+            if(preg_match('/(left|inner|right)\s*join/i', $joinCond)) $joinConds[] = $joinCond;
+        }
+        $params['joinConds'] = $joinConds ? implode(' ', $joinConds) : '';
+        $params['joinPrefix'] = isset($params['joinConds']) &&
+            preg_match('/(left|inner|right)\s*join/i', $params['joinConds']) ? "`a`." : '';
+        
         $where = $this->where($params);
-        $sql = "SELECT {$selectCase} FROM `{$this->tbname}` ".($where ? "WHERE ".$where : "");
+
+        $tbname = "`{$this->tbname}`".($params['joinPrefix'] ? " AS `a`" : "");
+        $sql = "SELECT {$selectCase} FROM $tbname {$params['joinConds']} ".($where ? "WHERE ".$where : "");
         
         $sqlWithOutLimit = $sql." {$groupByStr} {$orderByStr}";
         $sql .= " {$groupByStr} {$orderByStr} {$limitStr}";
@@ -230,6 +242,7 @@ class BaseDAO {
 
     protected function where($params)
     {
+        $prefix = $params['joinPrefix'];
         $sql = ''; $fields = array_column($this->tbinfo, 'field');
         foreach($fields as $field) 
         {
@@ -273,35 +286,38 @@ class BaseDAO {
                         }
                         if($vescape) $valueText = "'".$this->escape($valueText)."'"; 
                         if($field) $field = "`{$field}`";
-                        $sql .= " {$and} {$field} {$op} {$valueText}";
+                        $sql .= " {$and} {$prefix}{$field} {$op} {$valueText}";
                     }
                 }
                 else if(is_scalar($value) && '' !== $value) {
-                    $sql .= " AND `{$field}`='".$this->escape($value)."'";
+                    $sql .= " AND {$prefix}`{$field}`='".$this->escape($value)."'";
                 }
             } if(isset($params[$field.'Like']) && '' !== $params[$field.'Like']) {
-                $sql .= " AND `{$field}` LIKE '%".$this->escape($params[$field.'Like'])."%'";
+                $sql .= " AND {$prefix}`{$field}` LIKE '%".$this->escape($params[$field.'Like'])."%'";
             } if(isset($params[$field.'Geq']) && '' !== $params[$field.'Geq']) {
-                $sql .= " AND `{$field}`>='".$this->escape($params[$field.'Geq'])."'";
+                $sql .= " AND {$prefix}`{$field}`>='".$this->escape($params[$field.'Geq'])."'";
             } if(isset($params[$field.'Gt']) && '' !== $params[$field.'Gt']) {
-                $sql .= " AND `{$field}`>'".$this->escape($params[$field.'Gt'])."'";
+                $sql .= " AND {$prefix}`{$field}`>'".$this->escape($params[$field.'Gt'])."'";
             } if(isset($params[$field.'Leq']) && '' !== $params[$field.'Leq']) {
-                $sql .= " AND `{$field}`<='".$this->escape($params[$field.'Leq'])."'";
+                $sql .= " AND {$prefix}`{$field}`<='".$this->escape($params[$field.'Leq'])."'";
             } if(isset($params[$field.'Lt']) && '' !== $params[$field.'Lt']) {
-                $sql .= " AND `{$field}`<'".$this->escape($params[$field.'Lt'])."'";
+                $sql .= " AND {$prefix}`{$field}`<'".$this->escape($params[$field.'Lt'])."'";
             } if(isset($params[$field.'Neq']) && '' !== $params[$field.'Neq']) {
-                $sql .= " AND `{$field}`!='".$this->escape($params[$field.'Neq'])."'";
+                $sql .= " AND {$prefix}`{$field}`!='".$this->escape($params[$field.'Neq'])."'";
             } if(isset($params[$field.'In']) && ! is_null($params[$field.'In'])) {
                 if(is_array($params[$field.'In'])) $params[$field.'In'] = $params[$field.'In'] ? "'".implode("','", $params[$field.'In'])."'" : '';
                 if('' != $params[$field.'In']) {
-                    $sql .= " AND `{$field}` IN (".$params[$field.'In'].")";
+                    $sql .= " AND {$prefix}`{$field}` IN (".$params[$field.'In'].")";
                 }
             } if(isset($params[$field.'Nin']) && ! is_null($params[$field.'Nin'])) {
                 if(is_array($params[$field.'Nin'])) $params[$field.'Nin'] = $params[$field.'Nin'] ? "'".implode("','", $params[$field.'Nin'])."'" : '';
                 if('' != $params[$field.'Nin']) {
-                    $sql .= " AND `{$field}` NOT IN (".$params[$field.'Nin'].")";
+                    $sql .= " AND {$prefix}`{$field}` NOT IN (".$params[$field.'Nin'].")";
                 }
             }
+        }
+        if($prefix && $params['joinWhere']) {
+            $sql .= " AND ".implode(' AND ', (array)preg_replace('/^\s*(and|or)/i', '', $params['joinWhere']));
         }
         return preg_replace('/^\s*(and|or)/i', '', $sql);
     }
