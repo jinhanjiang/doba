@@ -294,6 +294,10 @@ class BaseDAO {
                 }
             } if(isset($params[$field.'Like']) && '' !== $params[$field.'Like']) {
                 $sql .= " AND {$prefix}`{$field}` LIKE '%".$this->escape($params[$field.'Like'])."%'";
+            } if(isset($params[$field.'LLike']) && '' !== $params[$field.'LLike']) {
+                $sql .= " AND {$prefix}`{$field}` LIKE '%".$this->escape($params[$field.'LLike'])."'";
+            } if(isset($params[$field.'RLike']) && '' !== $params[$field.'RLike']) {
+                $sql .= " AND {$prefix}`{$field}` LIKE '".$this->escape($params[$field.'RLike'])."%'";
             } if(isset($params[$field.'Geq']) && '' !== $params[$field.'Geq']) {
                 $sql .= " AND {$prefix}`{$field}`>='".$this->escape($params[$field.'Geq'])."'";
             } if(isset($params[$field.'Gt']) && '' !== $params[$field.'Gt']) {
