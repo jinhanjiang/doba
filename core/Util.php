@@ -164,7 +164,7 @@ HTML;
         foreach ($params as $parameter => $value)
         {
             $multipartbody .= $MPboundary . "\r\n";
-            if($value{0} == '@' )
+            if(substr($value, 0, 1) == '@')
             {
                 $url = ltrim($value, '@');
                 $content = file_get_contents($url);
