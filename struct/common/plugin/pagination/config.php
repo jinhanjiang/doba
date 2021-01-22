@@ -61,6 +61,8 @@ class PaginationPlugin extends BasePlugin {
             $this->currentPage = intval($_GET[$this->pageName]);
         } else if(isset($_POST[$this->pageName]) && $_POST[$this->pageName] > 0){
             $this->currentPage = intval($_POST[$this->pageName]);
+        } else if(isset($params['currentPage']) && $params['currentPage'] > 0){
+            $this->currentPage = intval($params['currentPage']);
         } else {
             $this->currentPage = 1;    
         }
