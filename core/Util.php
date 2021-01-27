@@ -87,6 +87,7 @@ HTML;
         $timeout = isset($options['timeout']) && $options['timeout'] > 0 ? $options['timeout'] : 60;
         $timeout = (! isset($options['waitForResponse']) || $options['waitForResponse']) ? $timeout : 1;
         $header = is_array($options['header']) ? $options['header'] : array();
+        $debug = isset($options['debug']) ? $options['debug'] : false;
 
         $withAttach = isset($options['attach']) ? $options['attach'] : false;
         if($withAttach) {
@@ -147,8 +148,14 @@ HTML;
         curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
         curl_setopt($ch, CURLOPT_URL, $url);
         $output = curl_exec($ch);
+
+        $response = $debug ? array(
+            'info'=>curl_getinfo($ch),
+            'error'=>curl_error($ch),
+            'response'=>$output
+        ) : $output;
         curl_close($ch);
-        return $output;
+        return $response;
     }
 
     private static function buildHttpQueryMulti($params)
