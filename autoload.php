@@ -36,7 +36,7 @@ class Autoloader
      */
     public static function me(){
         $class = get_called_class();
-        if(! self::$instance[$class]) {
+        if(! isset(self::$instance[$class])) {
             self::$instance[$class] = new $class();
         }
         return self::$instance[$class];
