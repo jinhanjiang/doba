@@ -92,9 +92,7 @@ class RpcPlugin extends BasePlugin {
             $pagination = false;
             // Here you need to encapsulate a paging class
 
-            $actionPage = self::RPC_PATH.$action.'Rpc.php';
-            if (! Util::isFile($actionPage)) throw new \Exception('The API method file: rpc/'.$action.'Rpc.php does not exist', 1007);
-            $objectName = "\\Doba\\Rpc\\".$action.'Rpc';
+            $objectName = "\\Doba\\Rpc\\".('api' != $app ? ucfirst($app)."\\" : ''). $action.'Rpc';
             $theAction = new $objectName();
             if(! method_exists($theAction, $p[3])) throw new \Exception('Call to undefined method: '.$action.'->'.$p[3], 1008);
             $Data['Results'] = $theAction->{$p[3]}($_REQUEST_DATA, $pagination);

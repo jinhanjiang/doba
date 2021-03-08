@@ -99,10 +99,11 @@ function initDaoMap($project, $dbConfig)
     $daoPath = ROOT_PATH."common/libs/dao/";
     $mapPath = ROOT_PATH."common/libs/map/";
     if($project) {
-        $daoNamespace = "Doba\Dao\\".ucfirst($project);
-        $mapNamespace = "Doba\Map\\".ucfirst($project);
-        $daoPath = ROOT_PATH."common/libs/dao/{$project}/";
-        $mapPath = ROOT_PATH."common/libs/map/{$project}/";    
+        $projectNamespace = ucfirst($project);
+        $daoNamespace = "Doba\Dao\\".$projectNamespace;
+        $mapNamespace = "Doba\Map\\".$projectNamespace;
+        $daoPath = ROOT_PATH."common/libs/dao/{$projectNamespace}/";
+        $mapPath = ROOT_PATH."common/libs/map/{$projectNamespace}/";    
     }
     $db = new \Doba\SQL(array('db'=>'mysql') + $dbConfig);
     $datas = $db->query('SHOW TABLES'); $tables = array();
