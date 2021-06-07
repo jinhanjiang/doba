@@ -61,6 +61,7 @@ class BaseDAO {
     }
 
     public function query($sql) {
+        $sql = $this->formatSQL($sql);
         $this->lastQuerySql = $sql;
         $result = $this->db->query($sql);
         $this->tbname = $this->originaltbname;
