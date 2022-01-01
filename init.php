@@ -215,7 +215,7 @@ TP;
             $pk = ('PRI' == strtoupper($result->Key)) ? 1 : 0;
             $notnull = 'NO' == strtoupper($result->Null) ? 1 : 0;
             $autoincremnt = ('AUTO_INCREMENT' == strtoupper($result->Extra)) ? 1 : 0;
-            $default = is_null($result->Default) ? 'NULL' : "'{$result->Default}'";
+            $default = is_null($result->Default) ? 'NULL' : ('' == $result->Default ? "''" : "'".addslashes($result->Default)."'");
 
             $tableInfo .= ($i>0?"\n\t\t\t":"")."array('field'=>'{$result->Field}', 'type'=>'{$type}', 'notnull'=>{$notnull}, 'default'=>{$default}, 'pk'=>{$pk}, 'autoincremnt'=>{$autoincremnt}),";
             if($pk) $tbpk = $result->Field;
