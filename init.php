@@ -99,7 +99,7 @@ function initDaoMap($project, $dbConfig)
     $daoPath = ROOT_PATH."common/libs/dao/";
     $mapPath = ROOT_PATH."common/libs/map/";
     if($project) {
-        $projectNamespace = ucfirst($project);
+        $projectNamespace = ucfirst(\Doba\Util::camelcase($project));
         $daoNamespace = "Doba\Dao\\".$projectNamespace;
         $mapNamespace = "Doba\Map\\".$projectNamespace;
         $daoPath = ROOT_PATH."common/libs/dao/{$projectNamespace}/";
@@ -126,6 +126,7 @@ function initDaoMap($project, $dbConfig)
             foreach($initConfig['IGNORED_TABLES_PREFIX'] as $regular) {
                 $daoName = preg_replace($regular, '', $tableName);
         }
+        $daoName = ucfirst(\Doba\Util::camelcase($daoName));
         if(! $invalidTablename) $tables[] = array('daoName'=> $daoName, 'tableName'=>$tableName);
     }
     initDao($project ? $project : 'default', 
@@ -146,8 +147,8 @@ class {{ @dao name }}DAO extends BaseDAO {
         parent::__construct('{{ @table name }}', 
             array(
                 'link'=>'{{ @project }}',
-                'tbpk'=>\{{ @map namespace}}\{{ @table name }}::getTablePk(),
-                'tbinfo'=>\{{ @map namespace}}\{{ @table name }}::getTableInfo(),
+                'tbpk'=>\{{ @map namespace}}\{{ @dao name }}::getTablePk(),
+                'tbinfo'=>\{{ @map namespace}}\{{ @dao name }}::getTableInfo(),
             )
         ); 
     }
@@ -224,11 +225,12 @@ TP;
         $results = $db->query("SHOW CREATE TABLE `{$table['tableName']}`");
         $results = array_values((array)$results[0]);
 
-        $mapfile = $path.$table['tableName'].'.php';
+        $className = $table['daoName'];
+        $mapfile = $path.$className.'.php';
 
         $GLOBALS['variables'] = array(
             'map namespace'=>$mapNamespace,
-            'class name'=>$table['tableName'],
+            'class name'=>$className,
             'table pk'=>$tbpk,
             'table info'=>$tableInfo,
             'create sql'=>preg_replace('/AUTO_INCREMENT=\d+\s*/i', '', $results[1]),
