@@ -60,6 +60,10 @@ class BaseDAO {
         return $this;
     }
 
+    public function getTableName() {
+       return $this->tbname;
+    }
+
     public function query($sql) {
         $sql = $this->formatSQL($sql);
         $this->lastQuerySql = $sql;
