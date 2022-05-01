@@ -38,6 +38,7 @@ class Autoloader
         $class = get_called_class();
         if(! isset(self::$instance[$class])) {
             self::$instance[$class] = new $class();
+            self::$instance[$class]->register();
         }
         return self::$instance[$class];
     }
@@ -50,8 +51,6 @@ class Autoloader
     public static function autoload() 
     {
         $loader = self::me();
-        $loader->register();
-
         // Register doba namespace
         $loader->addNamespace('Doba', ROOT_PATH."doba/core");
         // Register doba/rpc namespace
@@ -60,6 +59,8 @@ class Autoloader
         $loader->addNamespace('Doba\Dao', ROOT_PATH."common/libs/dao");
         // Register doba/map namespace
         $loader->addNamespace('Doba\Map', ROOT_PATH."common/libs/map");
+        // We can add namespace ourselves
+        return $loader;
     }
 
     /**
