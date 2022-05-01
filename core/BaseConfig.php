@@ -232,7 +232,11 @@ class BaseConfig
     }
 
     public function forward($a, $plus="") {
-        header("location:".$this->url($a, $plus)); exit;
+        $this->location($this->url($a, $plus));
+    }
+
+    public function location($url) {
+        header("location:".$url); exit;
     }
     /**
      * Multilanguage translation

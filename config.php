@@ -22,6 +22,9 @@ if(! function_exists('url')) {
 if(! function_exists('forward')) {
     function forward($a, $plus="") { return \Config::me()->forward($a, $plus); }
 }
+if(! function_exists('location')) {
+    function location($url) { return \Config::me()->location($url); }
+}
 if(! function_exists('langi18n')) {
     function langi18n($text, ...$args) { return \Config::me()->langi18n($text, $args); }
 }
