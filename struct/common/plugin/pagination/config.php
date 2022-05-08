@@ -73,7 +73,7 @@ class PaginationPlugin extends BasePlugin {
         if(isset($params['additional'])) {
             $additional = is_array($params['additional']) && count($params['additional']) 
                 ? array_values($params['additional']) : array();
-            $this->additional = count($additional) > 0 ? ','.implode(',', $additional) : '';
+            $this->additional = count($additional) > 0 ? ",'".implode("','", $additional)."'" : '';
         }
         return $this;
     }
