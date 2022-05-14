@@ -119,7 +119,7 @@ class BaseDAO {
     }
 
     /**
-     * log
+     * insert data to database
      * @param  array $params ， not contins (pid, dateCode, timeCreated)
      * @return [type]         [description]
      */
@@ -152,7 +152,7 @@ class BaseDAO {
     }
 
     /**
-     * log
+     * update database data 
      * @param  array $params
      * @return [type]         [description]
      */
@@ -245,6 +245,15 @@ class BaseDAO {
         return $this->query($sql);
     }
 
+    /**
+     * Array parameters converted to the statement of sql part
+     * for example: [
+     *      'name'=>['and'=>false, op'=>'like', 'value'=>'xiaoming'], // and `name` like '%xiaoming%'
+     *      'nameLike'=>'xiaoming', // and name='xiaoming'
+     *      'joinConds'=>['left join `table1` as `t1` on t1.tid=a.id', 'left join `table2` as `t2` on t2.tid=a.id'],
+     *      'joinWhere'=>[['p.name', 'xiaoming'], ['p.status', 'in', [1,2,3]]]
+     *  ]
+     */
     protected function where($params)
     {
         $prefix = $params['joinPrefix'];
@@ -259,76 +268,154 @@ class BaseDAO {
                     if(isset($value['value']) && is_scalar($value['value']) && '' !== $value['value'])
                     {
                         // array('and'=>false, 'op'=>'=', 'value'=>'')
-                        // op: [eq =], [geq, >=], [gt, >], [leq, <=], [lt, <], [<>, !=, neq], in, nin(not in) ,like, [custom]
-                        $valueText = $value['value']; $vescape = false;
-                        $and = isset($value['and']) && false === $value['and'] ? 'OR' : 'AND';
-                        $op = strtolower($value['op']);
-                        if('>=' == $op || 'geq'== $op) { 
-                            $op = '>='; $vescape = true; 
-                        } else if('>' == $op || 'gt'== $op) { 
-                            $op = '>'; $vescape = true; 
-                        } else if('<=' == $op || 'leq'== $op) {
-                            $op = '<='; $vescape = true; 
-                        } else if('<' == $op || 'lt'== $op) {
-                            $op = '<'; $vescape = true; 
-                        } else if('<>' == $op || '!='== $op || 'neq'== $op) {
-                            $op = '!='; $vescape = true; 
-                        } else if('in' == $op) {
-                            $op = 'IN'; $valueText = "({$valueText})";
-                        } else if('nin' == $op) {
-                            $op = 'NOT IN'; $valueText = "({$valueText})";
-                        } 
-                        else if('like' == $op) 
-                        {
-                            $op = 'LIKE'; $vescape = true;
-                            $valueText = preg_match('/^%/', $valueText) || preg_match('/%$/', $valueText) 
-                                ? $valueText : "%{$valueText}%";
-                        } 
-                        else if('custom' == $op) {
-                            $op = $field = ''; $valueText = "({$valueText})";
-                        } else {
-                            $op = '='; $vescape = true; 
-                        }
-                        if($vescape) $valueText = "'".$this->escape($valueText)."'"; 
-                        if($field) $field = "`{$field}`";
-                        $sql .= " {$and} {$prefix}{$field} {$op} {$valueText}";
+                        // op: [eq =], [geq, >=], [gt, >], [leq, <=], [lt, <], [<>, !=, neq], 
+                        //     [in, nin(not in)] ,[like, llike, rlike], [custom, raw]
+                        $nvalue = $value['value']; $op = $value['op'];
+                        $andOr = isset($value['and']) && false === $value['and'] ? 'OR' : 'AND';
+                        $sql .= ' '.$this->sqlPart($field, $op, $nvalue, $prefix, $andOr);
                     }
                 }
                 else if(is_scalar($value) && '' !== $value) {
-                    $sql .= " AND {$prefix}`{$field}`='".$this->escape($value)."'";
+                    $sql .= ' '.$this->sqlPart($field, 'eq', $value, $prefix);
                 }
             } if(isset($params[$field.'Like']) && '' !== $params[$field.'Like']) {
-                $sql .= " AND {$prefix}`{$field}` LIKE '%".$this->escape($params[$field.'Like'])."%'";
+                $sql .= ' '.$this->sqlPart($field, 'like', $params[$field.'Like'], $prefix);
             } if(isset($params[$field.'LLike']) && '' !== $params[$field.'LLike']) {
-                $sql .= " AND {$prefix}`{$field}` LIKE '%".$this->escape($params[$field.'LLike'])."'";
+                $sql .= ' '.$this->sqlPart($field, 'llike', $params[$field.'LLike'], $prefix);
             } if(isset($params[$field.'RLike']) && '' !== $params[$field.'RLike']) {
-                $sql .= " AND {$prefix}`{$field}` LIKE '".$this->escape($params[$field.'RLike'])."%'";
+                $sql .= ' '.$this->sqlPart($field, 'rlike', $params[$field.'RLike'], $prefix);
             } if(isset($params[$field.'Geq']) && '' !== $params[$field.'Geq']) {
-                $sql .= " AND {$prefix}`{$field}`>='".$this->escape($params[$field.'Geq'])."'";
+                $sql .= ' '.$this->sqlPart($field, 'geq', $params[$field.'Geq'], $prefix);
             } if(isset($params[$field.'Gt']) && '' !== $params[$field.'Gt']) {
-                $sql .= " AND {$prefix}`{$field}`>'".$this->escape($params[$field.'Gt'])."'";
+                $sql .= ' '.$this->sqlPart($field, 'gt', $params[$field.'Gt'], $prefix);
             } if(isset($params[$field.'Leq']) && '' !== $params[$field.'Leq']) {
-                $sql .= " AND {$prefix}`{$field}`<='".$this->escape($params[$field.'Leq'])."'";
+                $sql .= ' '.$this->sqlPart($field, 'leq', $params[$field.'Leq'], $prefix);
             } if(isset($params[$field.'Lt']) && '' !== $params[$field.'Lt']) {
-                $sql .= " AND {$prefix}`{$field}`<'".$this->escape($params[$field.'Lt'])."'";
+                $sql .= ' '.$this->sqlPart($field, 'lt', $params[$field.'Lt'], $prefix);
             } if(isset($params[$field.'Neq']) && '' !== $params[$field.'Neq']) {
-                $sql .= " AND {$prefix}`{$field}`!='".$this->escape($params[$field.'Neq'])."'";
+                $sql .= ' '.$this->sqlPart($field, 'neq', $params[$field.'Neq'], $prefix);
             } if(isset($params[$field.'In']) && ! is_null($params[$field.'In'])) {
-                if(is_array($params[$field.'In'])) $params[$field.'In'] = $params[$field.'In'] ? "'".implode("','", $params[$field.'In'])."'" : '';
-                if('' != $params[$field.'In']) {
-                    $sql .= " AND {$prefix}`{$field}` IN (".$params[$field.'In'].")";
-                }
+                $sql .= ' '.$this->sqlPart($field, 'in', $params[$field.'In'], $prefix);
             } if(isset($params[$field.'Nin']) && ! is_null($params[$field.'Nin'])) {
-                if(is_array($params[$field.'Nin'])) $params[$field.'Nin'] = $params[$field.'Nin'] ? "'".implode("','", $params[$field.'Nin'])."'" : '';
-                if('' != $params[$field.'Nin']) {
-                    $sql .= " AND {$prefix}`{$field}` NOT IN (".$params[$field.'Nin'].")";
-                }
+                $sql .= ' '.$this->sqlPart($field, 'nin', $params[$field.'Nin'], $prefix);
             }
         }
         if($prefix && $params['joinWhere']) {
-            $sql .= " AND ".implode(' AND ', (array)preg_replace('/^\s*(and|or)/i', '', $params['joinWhere']));
+            // for example: [['b.id', 1], ['b.status', 'in', [1,2,3]], ['b.name', 'like', 'xiaoming']]
+            if(is_array($params['joinWhere'])) {
+                foreach($params['joinWhere'] as $joinWhere) {
+                    if(is_array($joinWhere)) {
+                        $cntlen = count($joinWhere); $op = '=';
+                        if(2 == $cntlen) list($field, $value) = $joinWhere;
+                        else if(3 == $cntlen) list($field, $op, $value) = $joinWhere;
+                        else continue;
+                        // assemble sql
+                        $prefix = ''; $field = preg_replace('/`/', '', $field);
+                        if(false !== strpos($field, '.')) { // for example: `a`.`name`
+                            list($prefix, $field) = explode('.', $field);
+                            $prefix = "`{$prefix}`.";
+                        }
+                        $sql .= ' '.$this->sqlPart($field, $op, $value, $prefix);
+                    } else if(is_string($joinWhere)) {
+                        $sql .= " AND ".preg_replace('/^\s*(and|or)/i', '', $joinWhere);         
+                    }
+                }
+            } else if(is_string($params['joinWhere'])) {
+                $sql .= " AND ".preg_replace('/^\s*(and|or)/i', '', $params['joinWhere']); 
+            }
         }
         return preg_replace('/^\s*(and|or)/i', '', $sql);
+    }
+
+    /**
+     * Array parameters converted to the statement of sql part
+     */
+    protected function sqlPart($field, $op, $value, $prefix, $andOr='and') 
+    {
+        $andOr = strtoupper($andOr); $op = strtolower($op); $sql = '';
+        $field = $andOr.' '.$prefix."`{$field}`";
+        switch($op) {
+            case 'custom': // custom sql statement
+            case 'raw':
+                $sql = "{$andOr} ({$value})";
+                break;
+            case '=':
+            case 'eq':
+                if(is_int($value) || is_float($value)) {
+                    $sql = "{$field}=".$this->removeNonNumeric($value);
+                } else {
+                    $sql = "{$field}='".$this->escape($value)."'";
+                }
+                break;
+            case '>':
+            case 'gt':
+                if(is_int($value) || is_float($value)) {
+                    $sql = "{$field}>".$this->removeNonNumeric($value);
+                } else {
+                    $sql = "{$field}>'".$this->escape($value)."'";
+                }
+                break;
+            case '>=':
+            case 'geq':
+                if(is_int($value) || is_float($value)) {
+                    $sql = "{$field}>=".$this->removeNonNumeric($value);
+                } else {
+                    $sql = "{$field}>='".$this->escape($value)."'";
+                }
+                break;
+            case '<':
+            case 'lt':
+                if(is_int($value) || is_float($value)) {
+                    $sql = "{$field}<".$this->removeNonNumeric($value);
+                } else {
+                    $sql = "{$field}<'".$this->escape($value)."'";
+                }
+                break;
+            case '<=':
+            case 'leq':
+                if(is_int($value) || is_float($value)) {
+                    $sql = "{$field}<=".$this->removeNonNumeric($value);
+                } else {
+                    $sql = "{$field}<='".$this->escape($value)."'";
+                }
+                break;
+            case '<>':
+            case '!=':
+            case 'neq':
+                if(is_int($value) || is_float($value)) {
+                    $sql = "{$field}!=".$this->removeNonNumeric($value);
+                } else {
+                    $sql = "{$field}!='".$this->escape($value)."'";
+                }
+                break; 
+            case 'in':
+                if(is_array($value)) {
+                    $value = is_int($value[0]) 
+                        ? implode(",", array_map(function($data){ return (int)$data; }, $value)) 
+                        : "'".implode("','", $this->escape($value))."'";
+                }
+                $sql = "{$field} IN ($value)";
+                break;
+            case 'nin':
+            case 'not in':
+                if(is_array($value)) {
+                    $value = is_int($value[0]) 
+                        ? implode(",", array_map(function($data){ return (int)$data; }, $value)) 
+                        : "'".implode("','", $this->escape($value))."'";
+                }
+                $sql = "{$field} NOT IN ($value)";
+                break;
+            case 'like':
+                $sql = "{$field} LIKE '%".$this->escape($value)."%'";
+                break;
+            case 'llike':
+                $sql = "{$field} LIKE '%".$this->escape($value)."'";
+                break;
+            case 'rlike':
+                $sql = "{$field} LIKE '".$this->escape($value)."%'";
+                break;
+        }
+        return $sql;
     }
 
     public function findCount($params)
@@ -367,6 +454,10 @@ class BaseDAO {
 
     public function escape($value) {
         return is_null($value) ? NULL : (is_numeric($value) ? $value : str_replace(array("'", "\\"), array("''", "\\\\"), $value));
+    }
+
+    public function removeNonNumeric($value) {
+        return preg_replace('/[^\d\.]/', '', $value);
     }
 
 }
