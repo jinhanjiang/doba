@@ -363,7 +363,9 @@ HTML;
      * Convert ab_bc_def to abBcDef
      */
     public static function camelcase($str) {
-        return preg_replace_callback('/_(\w)/',function($match) {return strtoupper($match[1]);},$str);
+        return preg_replace_callback('/_(\w)/',function($match) {
+            return strtoupper($match[1]);
+        }, $str);
     }
 
     /**
@@ -390,8 +392,12 @@ HTML;
     public static function eJson($array=array()) { 
         return json_encode($array, JSON_UNESCAPED_UNICODE); 
     }
-    
-    public static function dJson($array=array(), $rtarray=false) { 
-        return json_decode($array, $rtarray); 
+
+    /**
+     * JSON_BIGINT_AS_STRING
+     */
+    public static function dJson($array=array(), 
+        $assoc=false, $depth = 512, $options = JSON_BIGINT_AS_STRING) { 
+        return json_decode($array, $assoc, $depth, $options); 
     }
 }

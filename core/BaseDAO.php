@@ -182,23 +182,23 @@ class BaseDAO {
     /**
      * Get a record through the id
      */
-    public function get($id=0) 
+    public function get($pk=0) 
     {
-        $datas = empty($id) ? array() : $this->finds(array($this->tbpk=>$id, 'limit'=>1));
+        $datas = empty($pk) ? array() : $this->finds(array($this->tbpk=>$pk, 'limit'=>1));
         return isset($datas[0]) ? (object)$datas[0] : NULL;
     }
 
     /**
      * Delete record through the id
      */
-    public function delete($id=0) 
+    public function delete($pk=0) 
     {
         $where = '';
-        if(is_array($id)) {
-            $sql = $this->where($id);
+        if(is_array($pk)) {
+            $sql = $this->where($pk);
             $where = $sql ? "WHERE ".$sql : '';
         } else {
-            $where = "WHERE `{$this->tbpk}`='{$id}'";
+            $where = "WHERE `{$this->tbpk}`='{$pk}'";
         }
         $this->query("DELETE FROM `{$this->tbname}` {$where}");
     }
@@ -256,7 +256,7 @@ class BaseDAO {
      */
     protected function where($params)
     {
-        $prefix = $params['joinPrefix'];
+        $prefix = isset($params['joinPrefix']) ? $params['joinPrefix'] : '';
         $sql = ''; $fields = array_column($this->tbinfo, 'field');
         foreach($fields as $field) 
         {
