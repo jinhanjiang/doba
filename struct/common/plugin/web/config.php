@@ -63,23 +63,26 @@ class WebPlugin extends BasePlugin {
             $_REQ['a'] = "{$control}.{$method}";
             $objectName = ucfirst($control.'Controller');
             $controlPage = CONTROL_PATH.$objectName.'.php';
-            if (! Util::isFile($controlPage)) throw new Exception(langi18n('The call controller file does not exist'));
+            if (! Util::isFile($controlPage)) throw new Exception(langi18n('The call controller file does not exist'), __LINE__);
             require($controlPage);
             $theController = new $objectName();
-            if(! method_exists($theController, $method)) throw new Exception(langi18n('The controller method [%1] does not exist', $objectName.'->'.$method));
+            if(! method_exists($theController, $method)) throw new Exception(langi18n('The controller method [%1] does not exist', $objectName.'->'.$method), __LINE__);
             $theController->{$method}($_REQ);
         } catch(Exception $ex) {
+            $responseOther = [];
+            if($ex->getCode() > 0) $responseOther['code'] = $ex->getCode();
             if(isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-                Util::echoJson(array('success'=>false, 'message'=>$ex->getMessage())); 
+                Util::echoJson(array('success'=>false, 'message'=>$ex->getMessage()) + $responseOther); 
             }
             else
             {
                 $defaultControlPage = CONTROL_PATH.'DefaultController.php';
                 if(Util::isFile($defaultControlPage)) require_once($defaultControlPage);
                 $defaultController = new DefaultController();
-                if(method_exists($defaultController, 'error')) $defaultController->error($ex->getMessage());
+                $message = ($ex->getCode() > 0 ? "[{$ex->getCode()}]:" : '').$ex->getMessage();
+                if(method_exists($defaultController, 'error')) $defaultController->error($message);
                 else {
-                    echo ($ex->getCode() ? "[{$ex->getCode()}]:" : '').$ex->getMessage();
+                    echo $message;
                 }
             }
         }

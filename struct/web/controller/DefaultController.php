@@ -23,7 +23,7 @@ class DefaultController extends BaseController
             'orderBy'=>count($plus) > 0 ? 'id DESC' : 'RAND()',
             'limit'=>$data['pagination']->limit()
         ) + $plus;
-        if(Util::isId($_GET['pid'])) $query['pid'] = $_GET['pid'];
+        if(Util::isId($_GET['pid']) && strlen($_GET['pid']) > 0) $query['pid'] = $_GET['pid'];
 
         $data['renderings'] = XxxDAO::me()->finds($query); 
         $data['pagination']->setPageTotal(XxxDAO::me()->findCount($query));

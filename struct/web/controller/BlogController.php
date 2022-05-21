@@ -20,7 +20,7 @@ class BlogController extends BaseController
     public function ajaxResponse() {
 
         if(! $_POST['test']) {
-            throw new Exception(langi18n('It\'s a big bug'));
+            throw new Exception(langi18n('It\'s a big bug'), __LINE__);
         }
 
         $this->json(array('data'=>'OK'));
