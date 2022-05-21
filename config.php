@@ -39,5 +39,8 @@ if(! function_exists('errorFunction')) {
 error_reporting(0);
 set_error_handler('errorFunction');
 register_shutdown_function(function() {\Config::me()->shutdownFunction();});
+// define raw request
+$_RAW_POST = file_get_contents("php://input");
+$_POST = ! empty($_RAW_POST) && \Doba\Util::isJson($_RAW_POST) ? json_decode($_RAW_POST, true) : $_POST;
 // load plugins
 $GLOBALS['plugin'] = new \Doba\Plugin(ROOT_PATH.'common/plugin');
