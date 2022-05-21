@@ -125,30 +125,39 @@ class BaseDAO {
      */
     public function insert($params) 
     {
-        $fieldstr = $valuestr = ""; $k=0;
+        $fieldstr = $valuestr = ""; $fieldlen = 0; $pkvalue = 0;
         foreach($this->tbinfo as $tbinfo) 
         {
             if(isset($params[$tbinfo['field']])) 
             {
-                if($tbinfo['autoincremnt'] && '' == $params[$tbinfo['field']]) continue;
+                if($tbinfo['autoincremnt']){
+                    if('' == $params[$tbinfo['field']]) continue;
+                } else if($tbinfo['pk']) {
+                    if('' != $params[$tbinfo['field']]) $pkvalue = $params[$tbinfo['field']];
+                }
 
                 $value = $this->escape($params[$tbinfo['field']]);
                 settype($value, $tbinfo['type']);
 
-                $valuestr .= ($k > 0 ? ',' : '');
+                $valuestr .= ($fieldlen > 0 ? ',' : '');
                 if(is_null($value)) $valuestr .= 'NULL'; 
                 else if('CURRENT_TIMESTAMP' == strtoupper($value)) $valuestr .= "'".date('Y-m-d H:i:s')."'"; 
                 else if(in_array($tbinfo['type'], array('int', 'float'))) {
                     $valuestr .= ('' === $value) ? (is_null($tbinfo['default']) ? (int)$value : $tbinfo['default']): $value;
                 }
                 else $valuestr .= "'".$value."'";
-                $fieldstr .= ($k > 0 ? ',' : '').'`'.$tbinfo['field'].'`';
-                $k ++;
+                $fieldstr .= ($fieldlen > 0 ? ',' : '').'`'.$tbinfo['field'].'`';
+                $fieldlen ++;
             }
         }
         $insertIgonre = isset($params['_INSERT_IGONRE']) && true === $params['_INSERT_IGONRE'] ? 'IGNORE ' : '';
         $field = "(".$fieldstr.")"; $value = "(".$valuestr.")";
-        return $k > 0 ? $this->query("INSERT {$insertIgonre}INTO `{$this->tbname}` {$field} VALUES {$value}") : 0;
+
+        $lastInsertId = $this->query("INSERT {$insertIgonre}INTO `{$this->tbname}` {$field} VALUES {$value}");
+        if($pkvalue) return $pkvalue;
+        else{
+            return $fieldlen > 0 ? $lastInsertId : 0;
+        }
     }
 
     /**
@@ -237,7 +246,7 @@ class BaseDAO {
         $where = $this->where($params);
 
         $tbname = "`{$this->tbname}`".($params['joinPrefix'] ? " AS `a`" : "");
-        $sql = "SELECT {$selectCase} FROM $tbname {$params['joinConds']} ".($where ? "WHERE ".$where : "");
+        $sql = "SELECT {$selectCase} FROM {$tbname} {$params['joinConds']} ".($where ? "WHERE ".$where : "");
         
         $sqlWithOutLimit = $sql." {$groupByStr} {$orderByStr}";
         $sql .= " {$groupByStr} {$orderByStr} {$limitStr}";
