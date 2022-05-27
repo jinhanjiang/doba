@@ -67,13 +67,30 @@ class PaginationPlugin extends BasePlugin {
             $this->currentPage = 1;    
         }
         // Ajax method called on the page
-        if($params['callFunction']) $this->getPaginationData = $params['callFunction'];
+        if($params['callFunction']) {
+            $this->getPaginationData = $params['callFunction'];
+        }
 
         // Other paramenters passed in the method in the click event
-        if(isset($params['additional'])) {
-            $additional = is_array($params['additional']) && count($params['additional']) 
-                ? array_values($params['additional']) : array();
-            $this->additional = count($additional) > 0 ? ",'".implode("','", $additional)."'" : '';
+        if(! empty($params['additionalFields'])) {
+            $additionalFields = empty($params['additionalFields']) 
+                ? [] : explode(',', $params['additionalFields']);
+            $additional = [];
+            if(is_array($additionalFields)) {
+                foreach($additionalFields as $field) {
+                    $additional[] = addslashes($_POST[$field]) ?? '';
+                }
+            }
+            $this->additional = empty($additional) ? '' : ",'".implode("','", $additional)."'";
+        }
+        else if(! empty($params['additional'])) {
+            $additional = [];
+            if(is_array($params['additional']) && count($params['additional']) > 0) {
+                foreach($params['additional'] as $additionalVal) {
+                    $additional[] = addslashes($additionalVal);
+                }
+            }
+            $this->additional = empty($additional) ? '' : ",'".implode("','", $additional)."'";
         }
         return $this;
     }
