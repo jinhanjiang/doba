@@ -36,13 +36,16 @@ class Cookie
     /**
      * Delete cookie
      *
-     * @param array $args
+     * @param array $params
      * @return boolean
      */
-    public function drop($args)
+    public function drop($params)
     {
-        $name = $args['name'];
-        $domain = isset($args['domain']) ? $args['domain'] : null;
+        $name = $params; $domain = null;
+        if(is_array($params)) {
+            $name = $params['name'];
+            $domain = isset($params['domain']) ? $params['domain'] : null;
+        }
         return isset($_COOKIE[$name]) ? setcookie($name, '', time() - 86400, '/', $domain) : true;
     }
     
@@ -61,14 +64,18 @@ class Cookie
      * @param array $args
      * @return boolean
      */
-    public function set($name, $value, $expire=0, $options=array())
+    public function set($name, $value, $expires=0, $options=array())
     {
         $value= $this->encrypt($value);
-        $expire = $expire > 0 ? time() + $expire : 0;
-        $path = isset($options['path']) ? $options['path'] : '/';
-        $domain = isset($options['domain']) ? $options['domain'] : null;
-        $secure = isset($options['secure']) ? $options['secure'] : 0;
-        return setcookie($name, $value, $expire, $path, $domain, $secure);
+        $options['expires'] = $expires > 0 ? time() + $expires : 0;
+        $options['path'] = isset($options['path']) ? $options['path'] : '/';
+        $options['domain'] = isset($options['domain']) ? $options['domain'] : null;
+        $options['secure'] = isset($options['secure']) ? $options['secure'] : ($_SERVER['HTTPS'] ? true : false);
+        $options['httponly'] = isset($options['httponly']) ? $options['httponly'] : true;
+        $options['samesite'] = isset($options['samesite']) ? $options['samesite'] : 'None'; // None || Lax  || Strict
+        return version_compare(PHP_VERSION, '7.3.0') >= 0
+            ? setcookie($name, $value, $options)
+            : setcookie($name, $value, $options['expires'], $options['path'], $options['domain'], $options['secure']);
     }
 
     /**
