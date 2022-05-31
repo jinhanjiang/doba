@@ -139,6 +139,14 @@ class RedisClient {
     }
 
     /**
+     * Evaluate a LUA script serverside
+     * @param $scrtip
+     */
+    public function eval($script){
+        return $this->getRedis()->eval($script);
+    }
+
+    /**
      * Delete one or more keys
      * @param $keys
      */

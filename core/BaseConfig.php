@@ -114,14 +114,13 @@ class BaseConfig
 
     public function getDb($key='default', $option=array()) {
         $reconnect = isset($option['reconnect']) && true === $option['reconnect'] ? true : false;
-        $ckey = (PHP_SAPI === 'cli') ? $key.getmypid() : $key;
-        if(! $GLOBALS[$ckey.'db'] || $reconnect) {
+        if(! $GLOBALS[$key.'db'] || $reconnect) {
             $dbConfigs = $this->getDbConfigs();
             $dbConfig = isset($dbConfigs[$key]) ? $dbConfigs[$key] : array();
             if(! $dbConfig) throw new \Exception('['.$key.'] database connection configuration not found');
-            $GLOBALS[$ckey.'db'] = new \Doba\SQL($dbConfig);
+            $GLOBALS[$key.'db'] = new \Doba\SQL($dbConfig);
         }
-        return $GLOBALS[$ckey.'db'];
+        return $GLOBALS[$key.'db'];
     }
 
     // Database link not set, default is mysql
