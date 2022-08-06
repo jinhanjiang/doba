@@ -16,7 +16,7 @@ class RedisClient {
     
     private static $instance = array();
     protected $redisServer =  null;
-    private $redisConfig = array('host'=>'127.0.0.1', 'port'=>6379, 'pass'=>'', 'persistent'=>false);
+    private $redisConfig = array('host'=>'127.0.0.1', 'port'=>6379, 'pass'=>'', 'db'=>0, 'persistent'=>false);
 
     // queue key
     protected $qkey = '';
@@ -62,6 +62,7 @@ class RedisClient {
             $redisServer->connect($redisConfig['host'], $redisConfig['port']);
         }
         if($redisConfig['pass']) $redisServer->auth($redisConfig['pass']);
+        $redisServer->select((int)$redisConfig['db']);
         $this->redisServer = $redisServer;
         return $this->redisServer;
     }
