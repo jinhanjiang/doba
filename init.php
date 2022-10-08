@@ -42,7 +42,10 @@ try{
             else
             {
                 foreach($dbConfigs as $project=>$dbConfig) {
-                    if('mysql' != $dbConfig['db']) continue;
+                    if('mysql' != $dbConfig['db'] 
+                        || (isset($dbConfig['noDaoMap']) && $dbConfig['noDaoMap'] === true)) {
+                        continue;
+                    }
                     initDaoMap($project, $dbConfig); $dbcnt ++;
                 }
             }
