@@ -118,12 +118,64 @@ class BaseDAO {
     }
 
     /**
-     * insert data to database
-     * @param  array $params ， not contins (pid, dateCode, timeCreated)
+     * insert data to database， support batch insert
+     * @param  array $params ，data to write to the database
+     *         example1: ['title'=>'test1', 'status'=>1]
+     *         example2: [['title','status'], ['test1', 1], ['test2', 1], ...]
+     *         example3: [['title'=>'test1', 'status'=>1], ['title'=>'test2', 'status'=>1], ...]
      * @return [type]         [description]
      */
     public function insert($params) 
     {
+        $field = $value = ""; $fieldlen = 0; $pkvalue = 0;
+        if(! is_array($params[0])) { // match: example1: ['title'=>'test1', 'status'=>1]
+            list($fieldstr, $valuestr, $fieldlen, $pkvalue) = $this->getFieldAndValueSqlPart($params);
+            $field = "(".$fieldstr.")"; $value = "(".$valuestr.")";
+        } 
+        else 
+        {
+            if(isset($params[0][0])) { 
+                // match: example2: [['title','status'], ['test1', 1], ['test2', 1], ...]
+                $values = []; $fields = $params[0];
+                for($i = 1, $plen = count($params); $i < $plen; $i++) {
+                    list($fieldstr, $valuestr, $fieldlen, $pkvalue) = $this->getFieldAndValueSqlPart(array_combine($fields, $params[$i]));
+                    if(! $field) {
+                        $field = "(".$fieldstr.")"; 
+                    }
+                    $values[] = "(".$valuestr.")";
+                }
+                $value = implode(",", $values);
+            } 
+            else 
+            {
+                // match: [['title'=>'test1', 'status'=>1], ['title'=>'test2', 'status'=>1], ...]
+                $values = [];
+                foreach($params as $param) {
+                    list($fieldstr, $valuestr, $fieldlen, $pkvalue) = $this->getFieldAndValueSqlPart($param);
+                    if(! $field) {
+                        $field = "(".$fieldstr.")"; 
+                    }
+                    $values[] = "(".$valuestr.")";
+                }
+                $value = implode(",", $values);
+            }
+        }
+        $field = $field ? $field : "()"; $value = $value ? $value : "()"; 
+
+        $insertIgonre = isset($params['_INSERT_IGONRE']) && true === $params['_INSERT_IGONRE'] ? 'IGNORE ' : '';
+        $lastInsertId = $this->query("INSERT {$insertIgonre}INTO `{$this->tbname}` {$field} VALUES {$value}");
+        if($pkvalue) return $pkvalue;
+        else{
+            return $fieldlen > 0 && $lastInsertId ? $lastInsertId : 0;
+        }
+    }
+
+    /**
+     * return part of the insert sql by passing parameters
+     * @param $prams ['title'=>'test1', 'status'=>1]
+     * @return [type] [description]
+     */
+    private function getFieldAndValueSqlPart($params) {
         $fieldstr = $valuestr = ""; $fieldlen = 0; $pkvalue = 0;
         foreach($this->tbinfo as $tbinfo) 
         {
@@ -149,14 +201,7 @@ class BaseDAO {
                 $fieldlen ++;
             }
         }
-        $insertIgonre = isset($params['_INSERT_IGONRE']) && true === $params['_INSERT_IGONRE'] ? 'IGNORE ' : '';
-        $field = "(".$fieldstr.")"; $value = "(".$valuestr.")";
-
-        $lastInsertId = $this->query("INSERT {$insertIgonre}INTO `{$this->tbname}` {$field} VALUES {$value}");
-        if($pkvalue) return $pkvalue;
-        else{
-            return $fieldlen > 0 ? $lastInsertId : 0;
-        }
+        return [$fieldstr, $valuestr, $fieldlen, $pkvalue];
     }
 
     /**
