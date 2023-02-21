@@ -66,20 +66,17 @@ class RpcPlugin extends BasePlugin {
             if(! in_array($_FILTER['api'], $ALLOW_ANONYMOUS_CALL_API)) 
             {
                 $isAuthSuccess = false;
-                if($httpHeaders['API_KEY'] && $httpHeaders['API_TOKEN']) 
+                $version = preg_replace('/[^(\d|\.)]/', '', $_FILTER['version']);
+                if("2.0" == $version) {
+                    if(is_callable('rpcRequestAuth')) $isAuthSuccess = call_user_func_array("rpcRequestAuth", array($httpHeaders, $contentJson));
+                    else throw new \Exception('RPC authentication method not defined', 1008);
+                }
+                else
                 {
-                    $version = preg_replace('/[^(\d|\.)]/', '', $_FILTER['version']);
-                    if("2.0" == $version) {
-                        if(is_callable('rpcRequestAuth')) $isAuthSuccess = call_user_func_array("rpcRequestAuth", array($httpHeaders, $contentJson));
-                        else throw new \Exception('RPC authentication method not defined', 1008);
-                    }
-                    else
-                    {
-                        if(isset($API_CALL_CONFIG[$httpHeaders['API_KEY']])
-                            && strtoupper($httpHeaders['API_TOKEN']) == strtoupper(md5($contentJson.$API_CALL_CONFIG[$httpHeaders['API_KEY']]))
-                        ) {
-                            $isAuthSuccess = true;
-                        }
+                    if(isset($API_CALL_CONFIG[$httpHeaders['API_KEY']])
+                        && strtoupper($httpHeaders['API_TOKEN']) == strtoupper(md5($contentJson.$API_CALL_CONFIG[$httpHeaders['API_KEY']]))
+                    ) {
+                        $isAuthSuccess = true;
                     }
                 }
                 if(! $isAuthSuccess) throw new \Exception('API authorization failed', 1002);

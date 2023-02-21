@@ -200,7 +200,7 @@ HTML;
     /**
      * Get ip
      */
-    static public function getIP() 
+    static public function getIp() 
     {   
         if ($_SERVER["HTTP_X_FORWARDED_FOR"]) {
             $ip = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
@@ -305,10 +305,16 @@ HTML;
         return $new_filename;
     }
 
+    /**
+     * Convert array to object
+     */
     public static function array2object($array = array()) {
         return json_decode(json_encode($array));
     }
      
+    /**
+     * Convert object to array
+     */
     public static function object2array($object) {
         return json_decode(json_encode($object), true);
     }
@@ -332,8 +338,7 @@ HTML;
     /**
      * Recursively create directories
      */
-    public static function mkdir($dir, $mode=0777)
-    {
+    public static function mkdir($dir, $mode=0777) {
         return is_dir($dir) ? true : mkdir($dir, $mode, true);
     }
     
@@ -380,24 +385,37 @@ HTML;
      */
     public static function isJson($text) { 
         if($text && is_string($text) && 'null' != $text) {
+            $text = trim($text);
+            $start = substr($text, 0, 1); $end = substr($text, -1);
+            if(('{' == $start && '}' == $end) 
+            || ('[' == $start && ']' == $end)) {}
+            else {
+                return false;
+            }
             @json_decode($text); return (json_last_error() === JSON_ERROR_NONE);
         }
         return false;
     }
     
+    /** 
+     * Output json string
+     */
     public static function echoJson($array=array()) { 
         echo self::eJson($array); exit;
     }
     
+    /**
+     * Convert array to json, If it contains bigint, it is automatically converted to a string
+     */
     public static function eJson($array=array()) { 
-        return json_encode($array, JSON_UNESCAPED_UNICODE); 
+        return json_encode($array, JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE); 
     }
 
     /**
-     * JSON_BIGINT_AS_STRING
+     * Convert json string to array, 
      */
-    public static function dJson($array=array(), 
+    public static function dJson($json="", 
         $assoc=false, $depth = 512, $options = JSON_BIGINT_AS_STRING) { 
-        return json_decode($array, $assoc, $depth, $options); 
+        return json_decode($json, $assoc, $depth, $options); 
     }
 }

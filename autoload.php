@@ -50,6 +50,10 @@ class Autoloader
      */
     public static function autoload() 
     {
+        // Support composer require extension
+        if(is_file($vendorLoader = ROOT_PATH."vendor/autoload.php")) {
+            require_once($vendorLoader);
+        }
         $loader = self::me();
         // Register doba namespace
         $loader->addNamespace('Doba', ROOT_PATH."doba/core");
