@@ -53,6 +53,7 @@
 |   |   |   |-config.php   
 |   |   |
 |   |   |-BasePlugin.php
+|   |   |-namespace.php
 |   |      
 |   |-rpc
 |
@@ -61,6 +62,7 @@
 |   |-同以下web
 |-mgr.php
 |
+|-vendor
 |-web
 |   |-controller
 |   |   |-DefaultController.php
@@ -86,8 +88,28 @@
 \Doba    => [项目]/doba/core/
 \Doba\Dao\db1    => [项目]/common/libs/dao/db1/
 \Doba\Map\db2    => [项目]/common/libs/map/db2/
-\Doba\rpc   => [项目]/common/rpc/
+\Doba\Rpc   => [项目]/common/rpc/
 ```
+除框架自定义对象命名空间，还会支持自定义，在commmon/plugin/namespace.php中添加，例如:
+```
+return [
+'Doba\Helper' => ROOT_PATH."common/config/helper",
+'Doba\TraitLib' => ROOT_PATH."common/config/trait",
+];
+```
+底层还会自动加载扩展中命名空间类方法，例如在commmon/plugin/excel扩展，在此扩展下创建helper目录，在此目录会自动添加到命名空间,
+```
+<?php
+
+namespace Doba\Plugin\Excel\Helper;
+
+class PHPExcelReadFilter {
+
+}
+```
+
+框架也支持composer引入第三方扩展，在项目index.php同级执行 `composer require xxx:xx` 引入相关扩展
+
 
 # 二 快速构建项目
 

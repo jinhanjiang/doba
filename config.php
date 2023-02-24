@@ -43,4 +43,22 @@ register_shutdown_function(function() {\Config::me()->shutdownFunction();});
 $_RAW_POST = file_get_contents("php://input");
 $_POST = ! empty($_RAW_POST) && \Doba\Util::isJson($_RAW_POST) ? json_decode($_RAW_POST, true) : $_POST;
 // load plugins
-$GLOBALS['plugin'] = new \Doba\Plugin(ROOT_PATH.'common/plugin');
+$_PLUGIN_PATH = ROOT_PATH.'common/plugin';
+$GLOBALS['plugin'] = new \Doba\Plugin($_PLUGIN_PATH);
+foreach(\Doba\Util::getDirs($_PLUGIN_PATH) as $pluginPathInfo) {
+    if(2 != $pluginPathInfo['type']) { continue; }
+    $pluginName = $pluginPathInfo['filename'];
+    $_PLUGIN_HELPER_PATH = $_PLUGIN_PATH.'/'.$pluginName.'/helper';
+    if(is_dir($_PLUGIN_HELPER_PATH)) {
+        $GLOBALS['autoloader']->addNamespace('Doba\Plugin\\'.ucfirst($pluginName).'\Helper', $_PLUGIN_HELPER_PATH);
+    }
+}
+$_NAMESPACE_FILE = $_PLUGIN_PATH.'/namespace.php';
+if(\Doba\Util::isFile($_NAMESPACE_FILE)) {
+    $_NAMESPACE_MAP = require_once($_NAMESPACE_FILE);
+    if(is_array($_NAMESPACE_MAP)) {
+        foreach($_NAMESPACE_MAP as $namespace=>$path) {
+            $GLOBALS['autoloader']->addNamespace($namespace, $path);
+        }
+    }
+}
