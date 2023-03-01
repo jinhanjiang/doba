@@ -138,6 +138,7 @@ class BaseDAO {
                 // match: example2: [['title','status'], ['test1', 1], ['test2', 1], ...]
                 $values = []; $fields = $params[0];
                 for($i = 1, $plen = count($params); $i < $plen; $i++) {
+                    if(empty($params[$i])) { continue; }
                     list($fieldstr, $valuestr, $fieldlen, $pkvalue) = $this->getFieldAndValueSqlPart(array_combine($fields, $params[$i]));
                     if(! $field) {
                         $field = "(".$fieldstr.")"; 
@@ -150,7 +151,8 @@ class BaseDAO {
             {
                 // match: [['title'=>'test1', 'status'=>1], ['title'=>'test2', 'status'=>1], ...]
                 $values = [];
-                foreach($params as $param) {
+                foreach($params as $key=>$param) {
+                    if(! is_numeric($key)) { continue; }
                     list($fieldstr, $valuestr, $fieldlen, $pkvalue) = $this->getFieldAndValueSqlPart($param);
                     if(! $field) {
                         $field = "(".$fieldstr.")"; 
