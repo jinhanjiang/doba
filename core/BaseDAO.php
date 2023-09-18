@@ -168,7 +168,7 @@ class BaseDAO {
         $lastInsertId = $this->query("INSERT {$insertIgonre}INTO `{$this->tbname}` {$field} VALUES {$value}");
         if($pkvalue) return $pkvalue;
         else{
-            return $fieldlen > 0 && $lastInsertId ? $lastInsertId : 0;
+            return $lastInsertId ? $lastInsertId : 0;
         }
     }
 
