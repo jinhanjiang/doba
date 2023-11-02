@@ -55,9 +55,9 @@ class SQL{
         } else if('mysql' == $configs['db']) {
             $persistent = isset($configs['persistent']) && $configs['persistent'] === true ? TRUE : FALSE;
             $port = isset($configs['port']) ? $configs['port'] : 3306;
-            $charset = isset($configs['charset']) ? $configs['charset'] : 'SET NAMES UTF8;';
+            $charset = isset($configs['charset']) ? $configs['charset'] : 'UTF8';
             $init = isset($configs['init']) ? $configs['init'] : "";
-            $initExec = ($init ? preg_replace('/;$/', '', $init).';' : '') .$charset.';';
+            $initExec = ($init ? preg_replace('/;$/', '', $init).';' : '') .'SET NAMES '.$charset.';';
             if (extension_loaded('pdo_mysql'))
             {
                 $pdoConfigs = is_array($configs['pdoConfigs']) ? $configs['pdoConfigs'] : array();

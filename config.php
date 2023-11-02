@@ -50,7 +50,7 @@ foreach(\Doba\Util::getDirs($_PLUGIN_PATH) as $pluginPathInfo) {
     $pluginName = $pluginPathInfo['filename'];
     $_PLUGIN_HELPER_PATH = $_PLUGIN_PATH.'/'.$pluginName.'/helper';
     if(is_dir($_PLUGIN_HELPER_PATH)) {
-        Autoloader::me()->addNamespace('Doba\Plugin\\'.ucfirst($pluginName).'\Helper', $_PLUGIN_HELPER_PATH);
+        \Autoloader::me()->addNamespace('Doba\Plugin\\'.ucfirst($pluginName).'\Helper', $_PLUGIN_HELPER_PATH);
     }
 }
 $_NAMESPACE_FILE = $_PLUGIN_PATH.'/namespace.php';
@@ -58,7 +58,7 @@ if(\Doba\Util::isFile($_NAMESPACE_FILE)) {
     $_NAMESPACE_MAP = require_once($_NAMESPACE_FILE);
     if(is_array($_NAMESPACE_MAP)) {
         foreach($_NAMESPACE_MAP as $namespace=>$path) {
-            Autoloader::me()->addNamespace($namespace, $path);
+            \Autoloader::me()->addNamespace($namespace, $path);
         }
     }
 }
