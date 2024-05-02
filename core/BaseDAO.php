@@ -217,6 +217,11 @@ class BaseDAO {
         foreach($params as $field=>$value) {
             if(! in_array($field, $columns)) continue;
             if(is_null($value)) $data[] = "`{$field}`=NULL";
+            else if(is_array($value) && 2 == count($value) && in_array($value[0], ['+', '-'])
+            ) {
+                // for example: ['quantity'=>['+', 10]] => quantity = quantity + 10
+                $data[] = "`{$field}`=`{$field}`{$value[0]}".$this->escape($value[1]);
+            }
             else {
                 $data[] = "`{$field}`='".$this->escape($value)."'";
             }
