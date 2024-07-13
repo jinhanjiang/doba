@@ -143,8 +143,8 @@ class RedisClient {
      * Evaluate a LUA script serverside
      * @param $scrtip
      */
-    public function eval($script){
-        return $this->getRedis()->eval($script);
+    public function eval($script, $params=[], $numkey=0){
+        return $this->getRedis()->eval($script, $params, $numkey);
     }
 
     /**

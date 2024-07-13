@@ -86,7 +86,10 @@ HTML;
         $urlarr = parse_url($url);
         $timeout = isset($options['timeout']) && $options['timeout'] > 0 ? $options['timeout'] : 60;
         $timeout = (! isset($options['waitForResponse']) || $options['waitForResponse']) ? $timeout : 1;
-        $header = is_array($options['header']) ? $options['header'] : array();
+        $outHeader = isset($options['outHeader']) && $options['outHeader'] ? true : false;
+        $arrayReturn = isset($options['arrayReturn']) && $options['arrayReturn'] ? true : false;
+        $header = is_array($options['header']) ? $options['header'] : array(); // for example: ['Content-Type: application/json']
+        $opts = is_array($options['opts']) ? $options['opts'] : array();
         $debug = isset($options['debug']) ? $options['debug'] : false;
 
         $withAttach = isset($options['attach']) ? $options['attach'] : false;
@@ -103,21 +106,39 @@ HTML;
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
-        if(isset($options['proxyIp']))//Contains IP and Port
+        if(isset($options['proxyIp'])) {//Contains IP and Port
             curl_setopt($ch, CURLOPT_PROXY, $options['proxyIp']);
-        if(isset($options['encoding']))
+        }
+        if(isset($options['encoding'])){
             curl_setopt($ch, CURLOPT_ENCODING, $options['encoding']);
-        if($options['userpwd'])
+        }
+        if($options['userpwd']){
             curl_setopt($ch, CURLOPT_USERPWD, $options['userpwd']);
-        if($options['cookietext'])
+        }
+        if($options['cookietext']){
             curl_setopt($ch, CURLOPT_COOKIE, $options['cookietext']);
+        }
         if (strtolower($urlarr['scheme']) == 'https')
         {
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST,  2);   
         }
-        if (isset($urlarr['port']))
+        // httpvxx default CURL_HTTP_VERSION_NONE lets CURL decide which version to use
+        if(isset($options['httpv10'])) { // forces HTTP/1.0
+            curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+        }
+        if(isset($options['httpv11'])) { // forces HTTP/1.1
+            curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        }
+        if(isset($options['httpv20'])) { // attempts HTTP 2 , CURL_HTTP_VERSION_2 alias of CURL_HTTP_VERSION_2_0
+            curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+        }
+        if(isset($options['httpv2tls'])) { // attempts HTTP 2 over TLS (HTTPS) only
+            curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS);
+        }
+        if (isset($urlarr['port'])) {
             curl_setopt($ch, CURLOPT_PORT, $urlarr['port']);
+        }
         if (strtoupper($method) == 'POST')
         {
             curl_setopt($ch, CURLOPT_POST, true);
@@ -147,15 +168,60 @@ HTML;
         }
         curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
         curl_setopt($ch, CURLOPT_URL, $url);
+        if(is_array($opts)) {
+            foreach($opts as $opt) {
+                curl_setopt($ch, $opt['key'], $opt['value']);
+            }
+        }
+        $respHeader = []; $respBody = '';
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        curl_setopt($ch, CURLINFO_HEADER_OUT, 1);
         $output = curl_exec($ch);
-
-        $response = $debug ? array(
-            'info'=>curl_getinfo($ch),
-            'error'=>curl_error($ch),
-            'response'=>$output
-        ) : $output;
+        // Obtain the header size in the response result
+        $hsize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        $htotal = strlen($output);
+        // Calculate the size of BODY content
+        $bsize = $htotal - $hsize;
+        // Retrieve header content based on header size
+        $respHeader = substr($output, 0, $hsize);
+        $respHeader = array_filter(explode("\r\n", $respHeader));
+        $respBody = substr($output, $hsize, $bsize);
+        // Parse response content compression method
+        $respDecode = '';
+        foreach((array)$respHeader as $rHeader) {
+            if(false !== ($pos = stripos($rHeader, 'Content-Encoding:'))) {
+                $respDecode = trim(substr($rHeader, $pos + 17));
+            }
+        }
+        if($respDecode) {
+            if('gzip' == $respDecode) {
+                $respBody = gzdecode($respBody);
+            } else if('deflate' == $respDecode) {
+                $respBody = gzuncompress($respBody);
+            } else if('deflate-raw' == $respDecode) {
+                $respBody = gzinflate($respBody);
+            }
+        }
+        if($debug)
+        {
+            $response = array(
+                'info'=>curl_getinfo($ch),
+                'error'=>curl_error($ch),
+                'header'=>$respHeader, 
+                'body'=>$respBody
+            );
+            curl_close($ch);
+            return $response;
+        }
         curl_close($ch);
-        return $response;
+        if($arrayReturn) {
+            $respBody = self::isJson($respBody) ? self::dJson($respBody, true) : [];
+        }
+        if($outHeader) {   
+            return ['header'=>$respHeader, 'body'=>$respBody];
+        } else {
+            return $respBody;
+        }
     }
 
     private static function buildHttpQueryMulti($params)
