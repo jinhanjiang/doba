@@ -15,14 +15,14 @@ namespace Doba;
 class Session{
     private static $instance = null;
     private $sess_id = "";
-    private $session_cache = array()
-    ;
+    private $session_cache = array();
     private function __construct(){
-        session_start();
-        $this->sess_id = session_id();
-        if (isset($_SESSION[session_id()])){
-            $this->session_cache = $_SESSION[session_id()];
-        }
+        $this->setSession(function(){
+            $this->sess_id = session_id();
+            if (isset($_SESSION[$this->sess_id])){
+                $this->session_cache = $_SESSION[$this->sess_id];
+            }
+        });
     }
 
     public static function me(){
@@ -33,12 +33,16 @@ class Session{
     }
 
     private function save(){
-        $_SESSION[$this->sess_id] = $this->session_cache;
+        $this->setSession(function(){
+            $_SESSION[$this->sess_id] = $this->session_cache;
+        });
     }
 
     public function clear(){
         $this->session_cache = array();
-        unset($_SESSION[$this->sess_id]);
+        $this->setSession(function(){
+            unset($_SESSION[$this->sess_id]);
+        });
     }
 
     public function assign($var, $val){
@@ -52,8 +56,14 @@ class Session{
     
     public function drop(){
         if (!func_num_args())throw new \Exception('missing argument(s)');
-        foreach (func_get_args() as $arg)unset($this->session_cache[$arg]);
+        foreach (func_get_args() as $arg) { unset($this->session_cache[$arg]); }
         $this->save();
+    }
+
+    private function setSession($callback) {
+        if(is_callable($callback)) {
+            session_start(); $callback(); session_write_close();
+        }
     }
 
     public function getSessionId(){
