@@ -202,7 +202,7 @@ class SQL{
             {
                 $this->wlog($sql, $ex->getCode().':'.$ex->getMessage());
                 $GLOBALS['QUERY_SQL'] = NULL;
-                throw new \Exception($ex->getMessage(), $ex->getCode());
+                throw new \Exception($ex->getMessage(), (int)$ex->getCode());
             }
         }
         return $result;
