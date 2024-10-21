@@ -60,10 +60,12 @@ class Session{
         $this->save();
     }
 
-    private function setSession($callback) {
+    public function setSession($callback) {
+        $resp = null;
         if(is_callable($callback)) {
-            session_start(); $callback(); session_write_close();
+            session_start(); $resp = $callback(); session_write_close();
         }
+        return $resp;
     }
 
     public function getSessionId(){
