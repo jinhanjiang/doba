@@ -164,8 +164,13 @@ class BaseDAO {
         }
         $field = $field ? $field : "()"; $value = $value ? $value : "()"; 
 
-        $insertIgonre = isset($params['_INSERT_IGONRE']) && true === $params['_INSERT_IGONRE'] ? 'IGNORE ' : '';
-        $lastInsertId = $this->query("INSERT {$insertIgonre}INTO `{$this->tbname}` {$field} VALUES {$value}");
+        $insertReplace = isset($params['_INSERT_REPLACE']) && true === $params['_INSERT_REPLACE'] ? true : false;
+        if($insertReplace) {
+            $lastInsertId = $this->query("REPLACE INTO `{$this->tbname}` {$field} VALUES {$value}");
+        } else {
+            $insertIgonre = isset($params['_INSERT_IGONRE']) && true === $params['_INSERT_IGONRE'] ? 'IGNORE ' : '';
+            $lastInsertId = $this->query("INSERT {$insertIgonre}INTO `{$this->tbname}` {$field} VALUES {$value}");
+        }
         if($pkvalue) return $pkvalue;
         else{
             return $lastInsertId ? $lastInsertId : 0;
