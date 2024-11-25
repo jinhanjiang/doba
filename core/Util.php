@@ -398,13 +398,14 @@ HTML;
      * Determine whether it is a file
      */
     public static function isFile($file) { 
-        $file = strval(str_replace("\0", "", $file)); return is_file($file); 
+        $file = substr(strval($file), 0, 1024); return is_file($file); 
     }
     
     /**
      * Recursively create directories
      */
     public static function mkdir($dir, $mode=0777) {
+        $dir = substr(strval($dir), 0, 1024); 
         return is_dir($dir) ? true : mkdir($dir, $mode, true);
     }
     
