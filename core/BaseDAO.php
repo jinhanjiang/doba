@@ -287,6 +287,10 @@ class BaseDAO {
         if(preg_match('/^\d+(,\d+)*$/', $params['limit'])) {
             $limitStr = "LIMIT {$params['limit']}";
         }
+        $forceIndexStr = '';
+        if(! empty($params['forceIndex'])) {
+            $forceIndexStr = "FORCE INDEX({$params['forceIndex']})";
+        }
         $selectCase = $params['selectCase'] ? $params['selectCase'] : '*';
 
         $joinConds = array();
@@ -302,7 +306,7 @@ class BaseDAO {
         $where = $this->where($params);
 
         $tbname = "`{$this->tbname}`".($params['joinPrefix'] ? " AS `a`" : "");
-        $sql = "SELECT {$selectCase} FROM {$tbname} {$params['joinConds']} ".($where ? "WHERE ".$where : "");
+        $sql = "SELECT {$selectCase} FROM {$tbname} {$forceIndexStr} {$params['joinConds']} ".($where ? "WHERE ".$where : "");
         
         $sqlWithOutLimit = $sql." {$groupByStr} {$orderByStr}";
         $sql .= " {$groupByStr} {$orderByStr} {$limitStr}";
