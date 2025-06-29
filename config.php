@@ -11,11 +11,11 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
 define('LEGAL_PAGE', 1);
-(! defined('CACHE_PATH')) && define('CACHE_PATH', ROOT_PATH.'cache/');
-(! defined('TEMP_PATH')) && define('TEMP_PATH', CACHE_PATH.'temp/');
-(! defined('PLUGIN_PATH')) && define('PLUGIN_PATH', ROOT_PATH.'common/plugin');
-(! defined('DEBUG_ERROR')) && define('DEBUG_ERROR', 'error');
-
+\Doba\Constant::setConstant('ROOT_PATH', dirname(__DIR__).'/');
+\Doba\Constant::setConstant('CACHE_PATH', \Doba\Constant::getConstant('ROOT_PATH').'cache/');
+\Doba\Constant::setConstant('TEMP_PATH', \Doba\Constant::getConstant('CACHE_PATH').'temp/');
+\Doba\Constant::setConstant('DEBUG_ERROR', 'error');
+// custom function
 if(! function_exists('url')) {
     function url($a, $plus="") { return \Config::me()->url($a, $plus); }
 }
@@ -43,7 +43,7 @@ register_shutdown_function(function() {\Config::me()->shutdownFunction();});
 $_RAW_POST = file_get_contents("php://input");
 $_POST = ! empty($_RAW_POST) && \Doba\Util::isJson($_RAW_POST) ? json_decode($_RAW_POST, true) : $_POST;
 // load plugins
-$_PLUGIN_PATH = ROOT_PATH.'common/plugin';
+$_PLUGIN_PATH = \Doba\Constant::getConstant('ROOT_PATH').'common/plugin';
 $GLOBALS['plugin'] = new \Doba\Plugin($_PLUGIN_PATH);
 foreach(\Doba\Util::getDirs($_PLUGIN_PATH) as $pluginPathInfo) {
     if(2 != $pluginPathInfo['type']) { continue; }

@@ -35,12 +35,13 @@ class Plugin {
      */
     public function call($plugin, $function, $data=array()) {
         $result = NULL;
-        if(isset($this->_plugins[$plugin]))
+        if(isset($this->_plugins[$plugin])) {
             foreach($this->_plugins[$plugin] as $methodInfo) {
-            $class =& $methodInfo[0];
-            $method = $methodInfo[1];
-            if(method_exists($class, $method) && $function == $method){
-                $result = $class->$method($data);
+                $class =& $methodInfo[0];
+                $method = $methodInfo[1];
+                if(method_exists($class, $method) && $function == $method){
+                    $result = $class->$method($data);
+                }
             }
         }
         else if(is_file(($pluginConfig = $this->_plugin_dir.$plugin.'/config.php'))) 

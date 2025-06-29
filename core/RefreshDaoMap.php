@@ -32,7 +32,7 @@ class RefreshDaoMap {
             $mapPath = ROOT_PATH."common/libs/map/{$projectNamespace}/";    
         }
         $db = new SQL(array('db'=>'mysql') + $dbConfig);
-        $datas = $db->query('SHOW TABLES'); $tables = array();
+        $datas = (array)$db->query('SHOW TABLES'); $tables = array();
         $initConfig = \Config::me()->initDaoMapConfig();
         for($i = 0, $ct = count($datas); $i < $ct; $i ++)
         {

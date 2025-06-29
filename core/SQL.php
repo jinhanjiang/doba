@@ -209,8 +209,8 @@ class SQL{
     }
 
     private function wlog($sql, $msg) {
-        if (defined('TEMP_PATH') && is_dir(TEMP_PATH)) {
-            $syslog = preg_replace('/\/$/', '', TEMP_PATH) . '/' . date('Ym') . '-doba.log';
+        if (Constant::getConstant('TEMP_PATH') && is_dir(Constant::getConstant('TEMP_PATH'))) {
+            $syslog = preg_replace('/\/$/', '', Constant::getConstant('TEMP_PATH')) . '/' . date('Ym') . '-doba.log';
             (!is_file($syslog)) && file_put_contents($syslog, '[' . date('Y-m') . ']SYSTEM LOG');
             file_put_contents($syslog, PHP_EOL . date('Y-m-d H:i:s') . '[2]['.$sql.']' . $msg, 8);
         }

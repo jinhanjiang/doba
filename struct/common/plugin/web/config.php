@@ -2,6 +2,7 @@
 use Doba\Session;
 use Doba\Cookie;
 use Doba\Util;
+use Doba\Constant;
 
 class WebPlugin extends BasePlugin {
     
@@ -16,12 +17,12 @@ class WebPlugin extends BasePlugin {
      */
     public static function checkIsLogin($params=array())
     {
-        $SESSION_INFO = Session::me()->get(LOGIN_SESSION_KEY);
+        $SESSION_INFO = Session::me()->get(Constant::getConstant('LOGIN_SESSION_KEY'));
         if(empty($SESSION_INFO)) {
             if(isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
                 Util::echoJson(array('success'=>false, 'message'=>langi18n('Not logged in'))); exit;
             } 
-            header("Location:".URL."?a=login"); exit; 
+            header("Location:".Constant::getConstant('URL')."?a=login"); exit; 
         }
     }
 
@@ -29,11 +30,11 @@ class WebPlugin extends BasePlugin {
     {
         // define constants
         $project = isset($params['project']) && $params['project'] ? $params['project'] : 'web';
-        define('LOGIN_SESSION_KEY', strtoupper('LOGIN_SESSION_KEY_'.$project));
-        define('WEB_PATH', ROOT_PATH.$project.'/');
-        define('CONTROL_PATH', WEB_PATH.'controller/');
-        define('LANGUAGE_PATH', WEB_PATH.'lang/');
-        define('PAGE_PATH', WEB_PATH.'views/');
+        Constant::setConstant('LOGIN_SESSION_KEY', strtoupper('LOGIN_SESSION_KEY_'.$project));
+        Constant::setConstant('WEB_PATH', Constant::getConstant('ROOT_PATH').$project.'/');
+        Constant::setConstant('CONTROL_PATH', Constant::getConstant('WEB_PATH').'controller/');
+        Constant::setConstant('LANGUAGE_PATH', Constant::getConstant('WEB_PATH').'lang/');
+        Constant::setConstant('PAGE_PATH', Constant::getConstant('WEB_PATH').'views/');
 
         // set default lang
         $lang = isset($params['lang']) && $params['lang'] ? $params['lang'] : 'en';
@@ -62,7 +63,7 @@ class WebPlugin extends BasePlugin {
             $control = $action['control']; $method = $action['method'];
             $_REQ['a'] = "{$control}.{$method}";
             $objectName = ucfirst($control.'Controller');
-            $controlPage = CONTROL_PATH.$objectName.'.php';
+            $controlPage = Constant::getConstant('CONTROL_PATH').$objectName.'.php';
             if (! Util::isFile($controlPage)) throw new Exception(langi18n('The call controller file does not exist'), __LINE__);
             require($controlPage);
             $theController = new $objectName();
@@ -76,7 +77,7 @@ class WebPlugin extends BasePlugin {
             }
             else
             {
-                $defaultControlPage = CONTROL_PATH.'DefaultController.php';
+                $defaultControlPage = Constant::getConstant('CONTROL_PATH').'DefaultController.php';
                 if(Util::isFile($defaultControlPage)) require_once($defaultControlPage);
                 $defaultController = new DefaultController();
                 $message = ($ex->getCode() > 0 ? "[{$ex->getCode()}]:" : '').$ex->getMessage();
@@ -95,8 +96,8 @@ class WebPlugin extends BasePlugin {
     public static function getURL($params=array())
     {
         $rootFile = isset($params['rootFile']) && $params['rootFile'] ? $params['rootFile'] : 'index.php';
-        if(defined('DOMAIN_HOST')) {
-            $scriptName = DOMAIN_PATH.$rootFile; $scriptUrl = DOMAIN_HOST.$scriptName;
+        if(! is_null(Constant::getConstant('DOMAIN_HOST'))) {
+            $scriptName = Constant::getConstant('DOMAIN_PATH').$rootFile; $scriptUrl = Constant::getConstant('DOMAIN_HOST').$scriptName;
         } else {
             $_IS_HTTPS = isset($_SERVER) && ('on'==$_SERVER['HTTPS'] || 'https'==$_SERVER['HTTP_X_FORWARDED_PROTO']) ? true : false;
             $scriptName = dirname($_SERVER['SCRIPT_NAME']);
@@ -121,7 +122,7 @@ class WebPlugin extends BasePlugin {
                 $lang = strtolower($l1[0]);
             }
         }
-        if(! is_file(LANGUAGE_PATH.$lang.'.php')) $lang = DEFAULT_LANGUAGE;
+        if(! is_file(Constant::getConstant('LANGUAGE_PATH').$lang.'.php')) $lang = Constant::getConstant('DEFAULT_LANGUAGE');
 
         // Common language
         $commonLangs = Util::isFile($commonlangfile = __DIR__.'/lang/'.$lang.'.php')
@@ -129,17 +130,17 @@ class WebPlugin extends BasePlugin {
         $GLOBALS['COMMON_LANG_FILE'] = $commonLangs ? $commonlangfile : "";
 
         // Loads language
-        $i18nlangs = Util::isFile($langfile = LANGUAGE_PATH.$lang.'.php') ? require_once($langfile) : array();
+        $i18nlangs = Util::isFile($langfile = Constant::getConstant('LANGUAGE_PATH').$lang.'.php') ? require_once($langfile) : array();
         
         // control language
         $action = self::getAction($_REQUEST);
-        $controlLang = Util::isFile($langfile = LANGUAGE_PATH.$action['control'].'/'.$lang.'.php') ? require_once($langfile) : array();
+        $controlLang = Util::isFile($langfile = Constant::getConstant('LANGUAGE_PATH').$action['control'].'/'.$lang.'.php') ? require_once($langfile) : array();
 
         $GLOBALS['I18N_LANGS'] = $controlLang + $i18nlangs + $commonLangs;
 
         return $lang;
     }
 
-    public static function getResPath() { return dirname(URL).'/static/'; }
+    public static function getResPath() { return dirname(Constant::getConstant('URL')).'/static/'; }
 
 }
