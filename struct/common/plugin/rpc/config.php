@@ -4,8 +4,6 @@ use Doba\Util;
 
 class RpcPlugin extends BasePlugin {
 
-    const RPC_PATH = ROOT_PATH.'common/rpc/';
-
     private $anonymousApis = [];
 
     public function __construct(&$plugin){ 
@@ -101,7 +99,7 @@ class RpcPlugin extends BasePlugin {
                     if($fileInfo['size'] > 1024*1024*15) {//Files cannot exceed 15M
                         throw new \Exception('The file size is over 15M', 1005);
                     }
-                    $filename = TEMP_PATH.Util::uploadFile(TEMP_PATH, $filed);
+                    $filename = \Doba\Constant::getConstant('TEMP_PATH').Util::uploadFile(\Doba\Constant::getConstant('TEMP_PATH'), $filed);
                 }
                 $_REQUEST_DATA[$filed] = json_encode(array('filename'=>$filename) + $fileInfo, 256);
                 $_TEMP_FILES[] = $filename;

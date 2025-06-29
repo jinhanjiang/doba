@@ -13,26 +13,24 @@ class Config extends \Doba\BaseConfig {
 
     // Rewrite the parent class to set the dabagase method
     public function setDbConfigs() {
-        if(defined('DB_CONFIGS')) {
-            $this->dbConfigs = json_decode(DB_CONFIGS, true);
-        } else {
-            $this->dbConfigs = array(
-                'db1'=>array(
-                    'dbHost'=>'192.168.0.1',
-                    'dbName'=>'testdb1',
-                    'dbUser'=>'root',
-                    'dbPass'=>'123456',
-                ),
-                'db2'=>array(
-                    'dbHost'=>'192.168.0.2',
-                    'dbName'=>'testdb2',
-                    'dbUser'=>'root',
-                    'dbPass'=>'123456',
-                ),
-            );
-        }
+        $dbConfigs = isset($GLOBALS['CONSTANT_DB_CONFIGS']) ? $GLOBALS['CONSTANT_DB_CONFIGS'] : [
+            'db1'=>array(
+                'dbHost'=>'192.168.0.1',
+                'dbName'=>'testdb1',
+                'dbUser'=>'root',
+                'dbPass'=>'123456',
+            ),
+            'db2'=>array(
+                'dbHost'=>'192.168.0.2',
+                'dbName'=>'testdb2',
+                'dbUser'=>'root',
+                'dbPass'=>'123456',
+            ),
+        ];
+        \Doba\Constant::setConstant('DB_CONFIGS', $dbConfigs);
+        parent::setDbConfigs();
     }
 
 }
-
+\Doba\Constant::setConstant('ROOT_PATH', ROOT_PATH);
 require(ROOT_PATH.'doba/config.php');

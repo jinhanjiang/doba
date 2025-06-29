@@ -1,13 +1,13 @@
 <?php
 use Doba\Util;
 use Doba\Session;
-
+use Doba\Constant;
 
 class BaseController
 {
     protected $memberInfo = array();
     public function __construct() {
-        $this->memberInfo = Session::me()->get(LOGIN_SESSION_KEY);
+        $this->memberInfo = Session::me()->get(Constant::getConstant('LOGIN_SESSION_KEY'));
     }
 
     protected function assign($data=array(), $controllConfig=array())
@@ -20,7 +20,7 @@ class BaseController
             ? $controllConfig['page'] : Util::snakecase($backtrace[0]['function']);
 
         $viewPage = strtolower($class.'/'.str_replace('_', '-', $method).'.php');
-        if(! Util::isFile(PAGE_PATH.$viewPage)) {
+        if(! Util::isFile(Constant::getConstant('PAGE_PATH').$viewPage)) {
             throw new Exception(langi18n('Display page does not exist'));
         }
         

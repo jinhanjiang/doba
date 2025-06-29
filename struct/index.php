@@ -6,12 +6,12 @@ require(__DIR__.'/common/config/config.php');
 // The default request is processed in the web directory
 $GLOBALS['plugin']->call('web', 'initPath');
 
-// define('DOMAIN_HOST', 'http://xxx.xxx.com');
-// define('DOMAIN_PATH', '/');
-define("URL", $GLOBALS['plugin']->call('web', 'getURL', array()));
+// \Doba\Constant::setConstant('DOMAIN_HOST', 'http://xxx.xxx.com');
+// \Doba\Constant::setConstant('DOMAIN_PATH', '/');
+\Doba\Constant::setConstant('URL', $GLOBALS['plugin']->call('web', 'getURL', array()));
 
 // Set website language
-define('LANGUAGE', $GLOBALS['plugin']->call('web', 'getLANG'));
+\Doba\Constant::setConstant('LANGUAGE', $GLOBALS['plugin']->call('web', 'getLANG'));
 
 // Response to the request
 $GLOBALS['plugin']->call('web', 'response');
@@ -27,10 +27,10 @@ require(__DIR__.'/common/config/config.php');
 
 $GLOBALS['plugin']->call('web', 'initPath', array('project'=>'mgr', 'lang'=>'en'));
 
-define("URL", $GLOBALS['plugin']->call('web', 'getURL', array('rootFile'=>'mgr.php')));
+\Doba\Constant::setConstant('URL', $GLOBALS['plugin']->call('web', 'getURL', array('rootFile'=>'mgr.php')));
 
 // Set website language
-define('LANGUAGE', $GLOBALS['plugin']->call('web', 'getLANG'));
+\Doba\Constant::setConstant('LANGUAGE', $GLOBALS['plugin']->call('web', 'getLANG'));
 
 // Response to the request
 $GLOBALS['plugin']->call('web', 'response');

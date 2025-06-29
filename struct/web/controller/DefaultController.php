@@ -17,6 +17,7 @@ class DefaultController extends BaseController
         // Set pagination
         $data['pagination'] = $GLOBALS['plugin']->call('pagination', 'start');
         $data['pagination']->perPage = 12;
+        $plus = [];
 
         // 常量
         $query = array(
@@ -48,7 +49,7 @@ class DefaultController extends BaseController
             // Save the relevant fields in the session after login
         );
 
-        Session::me()->assign(LOGIN_SESSION_KEY, $memberInfo);
+        Session::me()->assign(\Doba\Constant::getConstant('LOGIN_SESSION_KEY'), $memberInfo);
         $this->json();
     }
 

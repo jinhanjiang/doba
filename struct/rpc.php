@@ -6,7 +6,7 @@ require(__DIR__.'/common/config/config.php');
 
 $GLOBALS['plugin']->call('web', 'initPath');
 // Set website language
-define('LANGUAGE', $GLOBALS['plugin']->call('web', 'getLANG'));
+\Doba\Constant::setConstant('LANGUAGE', $GLOBALS['plugin']->call('web', 'getLANG'));
 
 // function rpcRequestAuth($authInfo, $contentJson)
 // {
