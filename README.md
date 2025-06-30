@@ -9,10 +9,11 @@
 |   |-AutoTask.php
 |   |-BaseConfig.php
 |   |-BaseDAO.php
+|   |-Constant.php
 |   |-Cookie.php
-|   |-Des3.php
 |   |-Plugin.php
 |   |-RedisClient.php
+|   |-RefreshDaoMap.php
 |   |-Session.php
 |   |-SQL.php
 |   |-Util.php
@@ -148,24 +149,20 @@ Doba框架支持多个数据库链接， 并快速生成DAO操作表结构
 
 ```
 <?php
-define('DB_CONFIGS', 
-    json_encode(
-        array(
-            'db1'=>array(
-                'dbHost'=>'192.168.0.1',
-                'dbName'=>'testdb1',
-                'dbUser'=>'root',
-                'dbPass'=>'123456',
-            ),
-            'db2'=>array(
-                'dbHost'=>'192.168.0.2',
-                'dbName'=>'testdb2',
-                'dbUser'=>'root',
-                'dbPass'=>'123456',
-            ),
-        )
-    )
-);
+$GLOBALS['CONSTANT_DB_CONFIGS'] = [
+    'db1'=>[
+        'dbHost'=>'192.168.0.1',
+        'dbName'=>'testdb1',
+        'dbUser'=>'root',
+        'dbPass'=>'123456',
+    ],
+    'db2'=>[
+        'dbHost'=>'192.168.0.2',
+        'dbName'=>'testdb2',
+        'dbUser'=>'root',
+        'dbPass'=>'123456',
+    ],
+];
 ```
 
 ### 2 或者在/data0/website/blog/common/config/config.php中配置
