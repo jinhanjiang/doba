@@ -14,6 +14,8 @@ define('LEGAL_PAGE', 1);
 \Doba\Constant::setConstant('ROOT_PATH', dirname(__DIR__).'/');
 \Doba\Constant::setConstant('CACHE_PATH', \Doba\Constant::getConstant('ROOT_PATH').'cache/');
 \Doba\Constant::setConstant('TEMP_PATH', \Doba\Constant::getConstant('CACHE_PATH').'temp/');
+\Doba\Constant::setConstant('PLUGIN_PATH', \Doba\Constant::getConstant('ROOT_PATH').'common/plugin/');
+\Doba\Constant::setConstant('NAMESPACE_FILE', \Doba\Constant::getConstant('ROOT_PATH').'common/config/namespace.php');
 \Doba\Constant::setConstant('DEBUG_ERROR', 'error');
 // custom function
 if(! function_exists('url')) {
@@ -40,20 +42,14 @@ error_reporting(0);
 set_error_handler('errorFunction');
 register_shutdown_function(function() {\Config::me()->shutdownFunction();});
 // define raw request
-$_RAW_POST = file_get_contents("php://input");
-$_POST = ! empty($_RAW_POST) && \Doba\Util::isJson($_RAW_POST) ? json_decode($_RAW_POST, true) : $_POST;
+$requestJsonContent = file_get_contents("php://input");
+$_POST = ! empty($requestJsonContent) && \Doba\Util::isJson($requestJsonContent) ? \Doba\Util::dJson($requestJsonContent, true) : $_POST;
+$GLOBALS['REQUEST_JSON_CONTENT'] = $requestJsonContent;
 // load plugins
-$_PLUGIN_PATH = \Doba\Constant::getConstant('ROOT_PATH').'common/plugin';
+$_PLUGIN_PATH = \Doba\Constant::getConstant('PLUGIN_PATH');
+\Autoloader::me()->addNamespace('Doba\Plugin', $_PLUGIN_PATH);
 $GLOBALS['plugin'] = new \Doba\Plugin($_PLUGIN_PATH);
-foreach(\Doba\Util::getDirs($_PLUGIN_PATH) as $pluginPathInfo) {
-    if(2 != $pluginPathInfo['type']) { continue; }
-    $pluginName = $pluginPathInfo['filename'];
-    $_PLUGIN_HELPER_PATH = $_PLUGIN_PATH.'/'.$pluginName.'/helper';
-    if(is_dir($_PLUGIN_HELPER_PATH)) {
-        \Autoloader::me()->addNamespace('Doba\Plugin\\'.ucfirst($pluginName).'\Helper', $_PLUGIN_HELPER_PATH);
-    }
-}
-$_NAMESPACE_FILE = $_PLUGIN_PATH.'/namespace.php';
+$_NAMESPACE_FILE = \Doba\Constant::getConstant('NAMESPACE_FILE');
 if(\Doba\Util::isFile($_NAMESPACE_FILE)) {
     $_NAMESPACE_MAP = require_once($_NAMESPACE_FILE);
     if(is_array($_NAMESPACE_MAP)) {

@@ -1,4 +1,8 @@
 <?php
+
+namespace Doba\Plugin;
+
+use \Exception as Exception;
 use Doba\Session;
 use Doba\Cookie;
 use Doba\Util;
@@ -79,7 +83,7 @@ class WebPlugin extends BasePlugin {
             {
                 $defaultControlPage = Constant::getConstant('CONTROL_PATH').'DefaultController.php';
                 if(Util::isFile($defaultControlPage)) require_once($defaultControlPage);
-                $defaultController = new DefaultController();
+                $defaultController = new \DefaultController();
                 $message = ($ex->getCode() > 0 ? "[{$ex->getCode()}]:" : '').$ex->getMessage();
                 if(method_exists($defaultController, 'error')) $defaultController->error($message);
                 else {

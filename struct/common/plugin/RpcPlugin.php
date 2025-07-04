@@ -1,5 +1,7 @@
 <?php
 
+namespace Doba\Plugin;
+
 use Doba\Util;
 
 class RpcPlugin extends BasePlugin {

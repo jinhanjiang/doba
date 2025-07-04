@@ -1,4 +1,7 @@
 <?php
+
+namespace Doba\Plugin\Web;
+
 use Doba\Util;
 use Doba\Session;
 use Doba\Constant;
@@ -21,7 +24,7 @@ class BaseController
 
         $viewPage = strtolower($class.'/'.str_replace('_', '-', $method).'.php');
         if(! Util::isFile(Constant::getConstant('PAGE_PATH').$viewPage)) {
-            throw new Exception(langi18n('Display page does not exist'));
+            throw new \Exception(langi18n('Display page does not exist'));
         }
         
         unset($controllConfig);

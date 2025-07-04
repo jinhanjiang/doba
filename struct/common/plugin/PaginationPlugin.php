@@ -1,4 +1,7 @@
 <?php
+
+namespace Doba\Plugin;
+
 use Doba\Util;
 
 class PaginationPlugin extends BasePlugin {

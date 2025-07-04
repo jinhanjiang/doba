@@ -12,14 +12,40 @@
  */
 namespace Doba;
 
+/*
+BasePlugin.php
+
+namespace Doba\Plugin;
+
+class BasePlugin {
+    protected function _install(&$plugin, $object) {
+        $ref = new \ReflectionClass($object);
+        $methods = $ref->getMethods(\ReflectionMethod::IS_PUBLIC);
+        foreach($methods as $method) {
+            if(preg_match('/^_/', $method->name)) { continue; }
+            $plugin->install($ref->getShortName(), $object, $method->name);
+        }
+    }
+}
+
+WebPlugin.php
+
+namespace Doba\Plugin;
+
+class WebPlugin extends BasePlugin {
+    public function __construct(&$plugin){ 
+        $this->_install($plugin, $this);
+    }
+}
+
+*/
+
 class Plugin {
     private $_plugin_dir;
     private $_plugins = array();
 
     public function __construct($pluginDir) {
         $this->_plugin_dir = preg_replace('/\/$/', '', $pluginDir).'/';
-        $basePluginFile = $this->_plugin_dir.'BasePlugin.php';
-        if(is_file($basePluginFile)) require($basePluginFile);
     }
 
     /**
@@ -27,6 +53,7 @@ class Plugin {
      */
     public function install($plugin, &$class, $method) {
         $key = get_class($class).'->'.$method;
+        $plugin = preg_replace('/plugin$/', '', strtolower($plugin));
         $this->_plugins[$plugin][$key] = array(&$class, $method);
     }
 
@@ -34,9 +61,10 @@ class Plugin {
      * Invoke the method provided by the plugin
      */
     public function call($plugin, $function, $data=array()) {
-        $result = NULL;
-        if(isset($this->_plugins[$plugin])) {
-            foreach($this->_plugins[$plugin] as $methodInfo) {
+        $result = NULL; $classFileName = ucfirst($plugin).'Plugin'; $className = "\\Doba\\Plugin\\".$classFileName;
+        $pluginKey = strtolower($plugin);
+        if(isset($this->_plugins[$pluginKey])) {
+            foreach($this->_plugins[$pluginKey] as $methodInfo) {
                 $class =& $methodInfo[0];
                 $method = $methodInfo[1];
                 if(method_exists($class, $method) && $function == $method){
@@ -44,13 +72,11 @@ class Plugin {
                 }
             }
         }
-        else if(is_file(($pluginConfig = $this->_plugin_dir.$plugin.'/config.php'))) 
+        else if(is_file($this->_plugin_dir.$classFileName.'.php')) 
         {
-            include_once($pluginConfig);
-            $class = ucfirst($plugin).'Plugin';
-            if(class_exists($class)) {
-                new $class($this);
-                return isset($this->_plugins[$plugin]) ? $this->call($plugin, $function, $data) : NULL;
+            if(class_exists($className)) {
+                new $className($this);
+                return isset($this->_plugins[$pluginKey]) ? $this->call($pluginKey, $function, $data) : NULL;
             }
         }
         return $result; 
