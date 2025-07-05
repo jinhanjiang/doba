@@ -35,6 +35,7 @@
 |-common
 |   |-config
 |   |   |-config.php
+|   |   |-namespace.php
 |   |   |-varconfig.php
 |   |
 |   |-libs 
@@ -42,19 +43,13 @@
 |   |   |-map
 |   |
 |   |-plugin
-|   |   |-rpc
-|   |   |   |-config.php
-|   |   |
-|   |   |-web      
-|   |   |   |-lang   
+|   |   |-Web      
 |   |   |   |-BaseController.php
-|   |   |   |-config.php
-|   |   |
-|   |   |-pagination
-|   |   |   |-config.php   
 |   |   |
 |   |   |-BasePlugin.php
-|   |   |-namespace.php
+|   |   |-PaginationPlugin.php
+|   |   |-RpcPlugin.php
+|   |   |-WebPlugin.php
 |   |      
 |   |-rpc
 |
@@ -98,11 +93,11 @@ return [
 'Doba\TraitLib' => ROOT_PATH."common/config/trait",
 ];
 ```
-底层还会自动加载扩展中命名空间类方法，例如在commmon/plugin/excel扩展，在此扩展下创建helper目录，在此目录会自动添加到命名空间,
+底层还会自动加载扩展中命名空间类方法，例如在commmon/plugin/Excel扩展，
 ```
 <?php
 
-namespace Doba\Plugin\Excel\Helper;
+namespace Doba\Plugin\Excel;
 
 class PHPExcelReadFilter {
 
@@ -599,12 +594,14 @@ class AccountDAO extends BaseDAO {
 
 当前框架核心模块主要，能让基础功能运行起来。如果要用到第三方的功能，可通过插件方式集成进来
 
-例如我们创建一下常量插件， 在/data0/website/blog/common/plugin下创建一个目录const, 
-在const目录下创建一个config.php文件,写入如下内容
+例如我们创建一下常量插件， 在/data0/website/blog/common/plugin下创建一个ConstPlugin.php文件, ,写入如下内容
 
 ```
 
 <?php
+
+namespace Doba\Plugin;
+
 use Doba\Util;
 
 class ConstPlugin extends BasePlugin {
@@ -644,8 +641,8 @@ public function index() {
 
 这里注意$GLOGALS['plugin']->call， 
 
-里面第一个参数const, 是data0/website/blog/common/plugin/下面const的名字， 
-里面第二个参数getConst，是data0/website/blog/common/plugin/const/config.php中的getConst方法， 只有public的方法才可被调用
+里面第一个参数const, 是data0/website/blog/common/plugin/下面ConstPlugin中const的名字， 
+里面第二个参数getConst，是data0/website/blog/common/plugin/ConstPlugin.php中的getConst方法， 只有public的方法才可被调用
 里面第三个参数， 是第二个参数的传参
 
 
