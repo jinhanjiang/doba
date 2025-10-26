@@ -62,7 +62,6 @@ class WebPlugin extends BasePlugin {
     {
         $_REQ = $_REQUEST;
         try{
-            require(__DIR__.'/BaseController.php');
             $action = self::getAction($_REQ);
             $control = $action['control']; $method = $action['method'];
             $_REQ['a'] = "{$control}.{$method}";

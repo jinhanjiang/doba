@@ -4,6 +4,7 @@ use Doba\SQL;
 use Doba\Session;
 use Doba\Cookie;
 use Doba\Dao\XxxDAO;
+use Doba\Plugin\Web\BaseController;
 
 class DefaultController extends BaseController
 {
