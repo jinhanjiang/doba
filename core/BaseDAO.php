@@ -273,7 +273,16 @@ class BaseDAO {
      * @param  array $params array('dateCode', 'dateCodeGeq', 'dateCodeLeq', 'pid', 'username')
      * @return [type]         [description]
      */
-    public function finds($params) 
+    public function finds($params) {
+        return $this->query($this->findSql($params));
+    }
+
+    /**
+     * To get query sql
+     * @param  array $params array('dateCode', 'dateCodeGeq', 'dateCodeLeq', 'pid', 'username')
+     * @return [type]         [description]
+     */
+    public function findSql($params) 
     {
         $groupByStr = '';
         if(! empty($params['groupBy'])) {
@@ -307,11 +316,9 @@ class BaseDAO {
 
         $tbname = "`{$this->tbname}`".($params['joinPrefix'] ? " AS `a`" : "");
         $sql = "SELECT {$selectCase} FROM {$tbname} {$forceIndexStr} {$params['joinConds']} ".($where ? "WHERE ".$where : "");
-        
-        $sqlWithOutLimit = $sql." {$groupByStr} {$orderByStr}";
         $sql .= " {$groupByStr} {$orderByStr} {$limitStr}";
         
-        return $this->query($sql);
+        return $sql;
     }
 
     /**
