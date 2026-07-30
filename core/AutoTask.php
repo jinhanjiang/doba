@@ -144,7 +144,7 @@ class AutoTask {
             'normal_exit'=>$normal_exit,
             'run_time'=>time() - $this->startTime,
             'memory_usage'=>Util::fsize(memory_get_usage(true)),
-            'process_no'=>posix_getpid(),
+            'process_no'=>function_exists('posix_getpid') ? posix_getpid() : getmypid(),
             'message'=>"normal exit: ".($normal_exit ? "[yes]" : "[no]"),
         );
         $errors = error_get_last();
@@ -239,7 +239,7 @@ class AutoTask {
                 'normal_exit'=>false,
                 'run_time'=>time() - $this->startTime,
                 'memory_usage'=>Util::fsize(memory_get_usage(true)),
-                'process_no'=>posix_getpid(),
+                'process_no'=>function_exists('posix_getpid') ? posix_getpid() : getmypid(),
                 'message'=>"Received signal: {$signal}",
             )
         );

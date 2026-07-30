@@ -30,7 +30,7 @@ class BaseConfig
     // recode system log
     public function recordSysLog($code, $message, $file, $line, $from) 
     {
-        $codes = array(); $errTypeMap = array(1=>'ERROR', 2=>'WARNING', 4=>'PARSE', 8=>'NOTICE', 16=>'CORE_ERROR', 32=>'CORE_WARNING', 64=>'COMPILE_ERROR', 128=>'COMPILE_WARNING', 256=>'USER_ERROR', 512=>'USER_WARNING', 1024=>'USER_NOTICE', 2047=>'ALL', 2048=>'STRICT', 4069=>'RECOVERABLE_ERROR'); 
+        $codes = array(); $errTypeMap = array(1=>'ERROR', 2=>'WARNING', 4=>'PARSE', 8=>'NOTICE', 16=>'CORE_ERROR', 32=>'CORE_WARNING', 64=>'COMPILE_ERROR', 128=>'COMPILE_WARNING', 256=>'USER_ERROR', 512=>'USER_WARNING', 1024=>'USER_NOTICE', 2047=>'ALL', 2048=>'STRICT', 4096=>'RECOVERABLE_ERROR'); 
         switch(Constant::getConstant('DEBUG_ERROR')) {
             case 'warning': $codes = array(2, 512); break;
             case 'error': $codes = array(1, 2, 4, 256, 512); break;
@@ -41,7 +41,7 @@ class BaseConfig
             $syslog = preg_replace('/\/$/', '', Constant::getConstant('TEMP_PATH')).'/'.date('Ym').'-doba.log'; 
             if(! is_file($syslog)) {
                 file_put_contents($syslog, '['.date('Y-m').']System Log');
-                chmod($syslog, 0777);
+                chmod($syslog, 0666);
             }
             $logInfo = array(
                 'code' => $errTypeMap[$code],
@@ -93,7 +93,9 @@ class BaseConfig
 
     public function shutdownFunction() {
         $e = error_get_last();
-        $this->recordSysLog($e['type'], $e['message'], $e['file'], $e['line'], 1);
+        if ($e) {
+            $this->recordSysLog($e['type'], $e['message'], $e['file'], $e['line'], 1);
+        }
     }
     
     public function getRedisConfig($key='default') {
@@ -156,11 +158,15 @@ class BaseConfig
     // Determine whether the development environment
     public function isDevEnvironment()
     {
-        $clientIp = \Doba\Util::getIp();
-        return ((! is_null(Constant::getConstant('SANDBOX')) 
-            && Constant::getConstant('SANDBOX')) || 
-            preg_match('/^192\.168/', $clientIp) || 
-            preg_match('/^127\.0/', $clientIp)) ? true : false;
+        if (! is_null(Constant::getConstant('SANDBOX')) && Constant::getConstant('SANDBOX')) {
+            return true;
+        }
+        // Prefer direct connection address to avoid X-Forwarded-For spoofing
+        $clientIp = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : \Doba\Util::getIp();
+        return (preg_match('/^192\.168\./', $clientIp) || 
+            preg_match('/^127\.0\./', $clientIp) ||
+            preg_match('/^10\./', $clientIp) ||
+            $clientIp === '::1') ? true : false;
     }
 
     /**

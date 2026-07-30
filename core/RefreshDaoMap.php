@@ -141,16 +141,18 @@ TP;
             $tableInfo = ""; $tbpk = "";
             $results = $db->query("DESC `{$table['tableName']}`");
             if(is_array($results)) foreach($results as $i=>$result) {
-                if(preg_match('/int/i', $result->Type)) $type = 'int';  
-                else if(preg_match('/(float|double|decimal)/i', $result->Type)) $type = 'float';
-                else $type = 'string';
-                $pk = ('PRI' == strtoupper($result->Key)) ? 1 : 0;
-                $notnull = 'NO' == strtoupper($result->Null) ? 1 : 0;
-                $autoincremnt = ('AUTO_INCREMENT' == strtoupper($result->Extra)) ? 1 : 0;
-                $default = is_null($result->Default) ? 'NULL' : ('' == $result->Default ? "''" : "'".addslashes($result->Default)."'");
+                $row = is_object($result) ? get_object_vars($result) : (array)$result;
+                $row = array_change_key_case($row, CASE_LOWER);
+                $type = self::mapColumnType(isset($row['type']) ? $row['type'] : '');
+                $pk = ('PRI' == strtoupper(isset($row['key']) ? $row['key'] : '')) ? 1 : 0;
+                $notnull = 'NO' == strtoupper(isset($row['null']) ? $row['null'] : '') ? 1 : 0;
+                $autoincremnt = ('AUTO_INCREMENT' == strtoupper(isset($row['extra']) ? $row['extra'] : '')) ? 1 : 0;
+                $defaultVal = array_key_exists('default', $row) ? $row['default'] : null;
+                $default = is_null($defaultVal) ? 'NULL' : ('' == $defaultVal ? "''" : "'".addslashes($defaultVal)."'");
+                $fieldName = isset($row['field']) ? $row['field'] : '';
 
-                $tableInfo .= ($i>0?"\n".str_repeat(" ", 12):"")."array('field'=>'{$result->Field}', 'type'=>'{$type}', 'notnull'=>{$notnull}, 'default'=>{$default}, 'pk'=>{$pk}, 'autoincremnt'=>{$autoincremnt}),";
-                if($pk) $tbpk = $result->Field;
+                $tableInfo .= ($i>0?"\n".str_repeat(" ", 12):"")."array('field'=>'{$fieldName}', 'type'=>'{$type}', 'notnull'=>{$notnull}, 'default'=>{$default}, 'pk'=>{$pk}, 'autoincremnt'=>{$autoincremnt}),";
+                if($pk) $tbpk = $fieldName;
             }
 
             $results = $db->query("SHOW CREATE TABLE `{$table['tableName']}`");
@@ -173,5 +175,15 @@ TP;
             }, $out[1]);
             file_put_contents($mapfile, str_replace($out[0], $toArray, $template));
         }
+    }
+
+    /**
+     * Normalize DESCRIBE column type to int|float|string
+     */
+    private static function mapColumnType($colType) {
+        $colType = strval($colType);
+        if (preg_match('/int/i', $colType)) return 'int';
+        if (preg_match('/(float|double|decimal|real|numeric)/i', $colType)) return 'float';
+        return 'string';
     }
 }

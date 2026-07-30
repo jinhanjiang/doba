@@ -73,7 +73,7 @@ function copydirRecurse($source, $destination, $child=true)
     if(! is_dir($source)){ 
         echo("Error:the $source is not a direction!");  return false; 
     } 
-    if(! is_dir($destination))  mkdir($destination, 0777);  
+    if(! is_dir($destination))  mkdir($destination, 0755, true);  
     $handle = dir($source); 
     while($entry = $handle->read()) 
     { 
@@ -86,7 +86,8 @@ function copydirRecurse($source, $destination, $child=true)
                     copy($source."/".$entry, $destination."/".$entry); 
                 }
             } 
-        } 
+        }
     } 
+    $handle->close();
     return true; 
 }

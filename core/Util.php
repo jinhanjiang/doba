@@ -88,8 +88,8 @@ HTML;
         $timeout = (! isset($options['waitForResponse']) || $options['waitForResponse']) ? $timeout : 1;
         $outHeader = isset($options['outHeader']) && $options['outHeader'] ? true : false;
         $arrayReturn = isset($options['arrayReturn']) && $options['arrayReturn'] ? true : false;
-        $header = is_array($options['header']) ? $options['header'] : array(); // for example: ['Content-Type: application/json']
-        $opts = is_array($options['opts']) ? $options['opts'] : array();
+        $header = (isset($options['header']) && is_array($options['header'])) ? $options['header'] : array(); // for example: ['Content-Type: application/json']
+        $opts = (isset($options['opts']) && is_array($options['opts'])) ? $options['opts'] : array();
         $debug = isset($options['debug']) ? $options['debug'] : false;
 
         $withAttach = isset($options['attach']) ? $options['attach'] : false;
@@ -112,16 +112,18 @@ HTML;
         if(isset($options['encoding'])){
             curl_setopt($ch, CURLOPT_ENCODING, $options['encoding']);
         }
-        if($options['userpwd']){
+        if(!empty($options['userpwd'])){
             curl_setopt($ch, CURLOPT_USERPWD, $options['userpwd']);
         }
-        if($options['cookietext']){
+        if(!empty($options['cookietext'])){
             curl_setopt($ch, CURLOPT_COOKIE, $options['cookietext']);
         }
-        if (strtolower($urlarr['scheme']) == 'https')
+        if (isset($urlarr['scheme']) && strtolower($urlarr['scheme']) == 'https')
         {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST,  2);   
+            // Allow opt-in insecure mode for local/dev only
+            $verifySsl = !isset($options['verifySsl']) || $options['verifySsl'] !== false;
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $verifySsl);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verifySsl ? 2 : 0);   
         }
         // httpvxx default CURL_HTTP_VERSION_NONE lets CURL decide which version to use
         if(isset($options['httpv10'])) { // forces HTTP/1.0
@@ -264,26 +266,29 @@ HTML;
     }
 
     /**
-     * Get ip
+     * Get client IP
+     * Prefer REMOTE_ADDR; only trust X-Forwarded-For / X-Real-IP when TRUST_PROXY is enabled
      */
     static public function getIp() 
     {   
-        if ($_SERVER["HTTP_X_FORWARDED_FOR"]) {
-            $ip = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-            $ip = trim(current($ip));
-        } else if ($_SERVER["HTTP_CLIENT_IP"]) 
-            $ip = $_SERVER["HTTP_CLIENT_IP"]; 
-        else if ($_SERVER["REMOTE_ADDR"]) 
-            $ip = $_SERVER["REMOTE_ADDR"]; 
-        else if (getenv("HTTP_X_FORWARDED_FOR")) 
-            $ip = getenv("HTTP_X_FORWARDED_FOR"); 
-        else if (getenv("HTTP_CLIENT_IP")) 
-            $ip = getenv("HTTP_CLIENT_IP");
-        else if (getenv("REMOTE_ADDR")) 
-            $ip = getenv("REMOTE_ADDR"); 
-        else 
-            $ip = "Unknown"; 
-        return $ip; 
+        $remote = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '';
+        $trustProxy = Constant::getConstant('TRUST_PROXY');
+        if ($trustProxy) {
+            if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+                $ip = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+                $ip = trim(current($ip));
+                if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                    return $ip;
+                }
+            }
+            if (!empty($_SERVER['HTTP_CLIENT_IP']) && filter_var($_SERVER['HTTP_CLIENT_IP'], FILTER_VALIDATE_IP)) {
+                return $_SERVER['HTTP_CLIENT_IP'];
+            }
+        }
+        if ($remote && filter_var($remote, FILTER_VALIDATE_IP)) {
+            return $remote;
+        }
+        return 'Unknown'; 
     }
 
     /**
@@ -292,6 +297,7 @@ HTML;
     public static function fsize($size){
         $unit = array('b','Kb','Mb','Gb','Tb','Pb');
         $prefix = $size < 0 ? '-' : ''; $size = abs($size);
+        if ($size == 0) return '0 b';
         return $prefix.@round($size/pow(1024,($i=floor(log($size,1024)))),2).' '.$unit[$i];
     }
 
@@ -404,7 +410,7 @@ HTML;
     /**
      * Recursively create directories
      */
-    public static function mkdir($dir, $mode=0777) {
+    public static function mkdir($dir, $mode=0755) {
         $dir = substr(strval($dir), 0, 1024); 
         return is_dir($dir) ? true : mkdir($dir, $mode, true);
     }

@@ -107,6 +107,11 @@ class RedisClient {
      */
     public function setnx($key, $value,$exp=0) {
         $redis = $this->getRedis();
+        // Atomic set-if-not-exists with optional TTL (avoids race between setnx and expire)
+        if (!empty($exp) && method_exists($redis, 'set')) {
+            $ok = $redis->set($key, $value, array('nx', 'ex' => (int)$exp));
+            return (bool)$ok;
+        }
         $isOk = $redis->setnx($key, $value);
         if($isOk && ! empty($exp)) $redis->expire($key, $exp);
         return $isOk;
@@ -207,7 +212,9 @@ class RedisClient {
      */
     public function queueSize() {
         if(! $this->qkey) throw new \Exception('Queue key can not be empty');
-        return $this->getRedis()->lSize($this->qkey);
+        $redis = $this->getRedis();
+        // lSize is deprecated; prefer lLen
+        return method_exists($redis, 'lLen') ? $redis->lLen($this->qkey) : $redis->lSize($this->qkey);
     }
 
 }

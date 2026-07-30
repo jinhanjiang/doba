@@ -51,14 +51,17 @@ class RpcPlugin extends BasePlugin {
             }
             $GLOBALS['_rpc_private_params']['httpHeaders'] = $httpHeaders;
             preg_match('/(\w+)\.(\w+)\.(\w+)$/i', $_RAW_POST['api'], $p);
+            if (count($p) < 4) {
+                throw new \Exception('Invalid API format, expected app.Action.method', 1004);
+            }
             $app = strtolower($p[1]); $action = $p[2]; $method = $p[3];
-            $objectName = "\\Doba\\Rpc\\".('api' != $app ? ucfirst($app)."\\" : '')."\\". $action.'Rpc';
+            $objectName = "\\Doba\\Rpc\\" . ('api' != $app ? ucfirst($app) . "\\" : '') . $action . 'Rpc';
             $theAction = new $objectName();
-            if(! method_exists($theAction, $p[3])) throw new \Exception('Call to undefined method: '.$action.'->'.$method, 1003);
+            if(! method_exists($theAction, $method)) throw new \Exception('Call to undefined method: '.$action.'->'.$method, 1003);
             $data = $theAction->{$method}($_REQUEST_DATA);
             $this->ccc($_TEMP_FILES); Util::echoJson(array('code' => '200', 'message' => 'SUCCESS', 'data' => $data));
         } catch(\Exception $ex) {
-            $this->ccc($_TEMP_FILES); Util::echoJson(array('code' => strval($ex->getCode()), 'message'=>$ex->getMessage()));
+            $this->ccc(isset($_TEMP_FILES) ? $_TEMP_FILES : array()); Util::echoJson(array('code' => strval($ex->getCode()), 'message'=>$ex->getMessage()));
         }
     }
 
@@ -69,16 +72,17 @@ class RpcPlugin extends BasePlugin {
     public function getRequestParams() 
     {
         $_REQUEST_DATA = $_RAW_POST = $_TEMP_FILES = [];
+        $contentType = isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : '';
         // json request
-        if(preg_match('/^application\/json/i', $_SERVER['CONTENT_TYPE'])) {
+        if(preg_match('/^application\/json/i', $contentType)) {
             $contentJson = file_get_contents('php://input');
             $_RAW_POST = json_decode($contentJson, true);
-            $_REQUEST_DATA = $_RAW_POST['edatas'];
+            $_REQUEST_DATA = isset($_RAW_POST['edatas']) ? $_RAW_POST['edatas'] : array();
         } 
         // Upload file request
         else if(
-            preg_match('/^multipart\/form\-data/i', $_SERVER['CONTENT_TYPE']) ||
-            preg_match('/^application\/x\-www\-form\-urlencoded/i', $_SERVER['CONTENT_TYPE'])
+            preg_match('/^multipart\/form\-data/i', $contentType) ||
+            preg_match('/^application\/x\-www\-form\-urlencoded/i', $contentType)
         ) 
         {
             // 1 Encapsulate post request

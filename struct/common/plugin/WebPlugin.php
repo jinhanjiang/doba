@@ -42,7 +42,10 @@ class WebPlugin extends BasePlugin {
 
         // set default lang
         $lang = isset($params['lang']) && $params['lang'] ? $params['lang'] : 'en';
-        define('DEFAULT_LANGUAGE', $lang);
+        Constant::setConstant('DEFAULT_LANGUAGE', $lang);
+        if (!defined('DEFAULT_LANGUAGE')) {
+            define('DEFAULT_LANGUAGE', $lang);
+        }
     }
 
     private static function getAction($_REQ) {
@@ -125,7 +128,9 @@ class WebPlugin extends BasePlugin {
                 $lang = strtolower($l1[0]);
             }
         }
-        if(! is_file(Constant::getConstant('LANGUAGE_PATH').$lang.'.php')) $lang = Constant::getConstant('DEFAULT_LANGUAGE');
+        if(! is_file(Constant::getConstant('LANGUAGE_PATH').$lang.'.php')) {
+            $lang = Constant::getConstant('DEFAULT_LANGUAGE') ?: (defined('DEFAULT_LANGUAGE') ? DEFAULT_LANGUAGE : 'en');
+        }
 
         // Common language
         $commonLangs = Util::isFile($commonlangfile = __DIR__.'/lang/'.$lang.'.php')

@@ -33,7 +33,7 @@ class PaginationPlugin extends BasePlugin {
 
     // Next page
     public $nextPage = "&gt;";
-    public $nextBar = "&gt;&gt";
+    public $nextBar = "&gt;&gt;";
 
     // Home
     public $firstPage = "Home";
@@ -81,7 +81,7 @@ class PaginationPlugin extends BasePlugin {
             $additional = [];
             if(is_array($additionalFields)) {
                 foreach($additionalFields as $field) {
-                    $additional[] = addslashes($_POST[$field]) ?? '';
+                    $additional[] = addslashes(isset($_POST[$field]) ? $_POST[$field] : '');
                 }
             }
             $this->additional = empty($additional) ? '' : ",'".implode("','", $additional)."'";
@@ -118,7 +118,8 @@ class PaginationPlugin extends BasePlugin {
     public function setPageTotal($total=0)
     {   
         $this->total = (int)$total;
-        $this->totalPage = ceil($this->total / $this->perPage);     
+        $perPage = max(1, (int)$this->perPage);
+        $this->totalPage = (int)ceil($this->total / $perPage);     
     }
 
     /**

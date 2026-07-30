@@ -82,10 +82,9 @@ class BaseDAO {
         $fields = array();
         if('sqlite' == $this->db->dbname) {
             $results = $this->db->query("PRAGMA TABLE_INFO(`{$this->tbname}`)");
-            if(is_array($results)) foreach($results as $result) {  
-                if(preg_match('/^int/i', $result->type)) $type = 'int';  
-                else if('REAL' == strtoupper($result->type)) $type = 'float';
-                else $type = 'string';
+            if(is_array($results)) foreach($results as $result) {
+                $colType = isset($result->type) ? $result->type : '';
+                $type = $this->normalizeFieldType($colType);
                 $fields[] = array(
                     'field'=>$result->name,
                     'type'=>$type,
@@ -99,22 +98,55 @@ class BaseDAO {
         } else if('mysql' == $this->db->dbname) {
             $results = $this->db->query("DESC `{$this->tbname}`");
             if(is_array($results)) foreach($results as $result) {
-                if(preg_match('/int/i', $result->type)) $type = 'int';  
-                else if(preg_match('/(float|double|decimal)/i', $result->type)) $type = 'float';
-                else $type = 'string';
-                $pk = ('PRI' == strtoupper($result->Key)) ? true : false;
+                // PDO/mysqli may return Type or type depending on ATTR_CASE
+                $row = is_object($result) ? get_object_vars($result) : (array)$result;
+                $row = array_change_key_case($row, CASE_LOWER);
+                $colType = isset($row['type']) ? $row['type'] : '';
+                $type = $this->normalizeFieldType($colType);
+                $pk = ('PRI' == strtoupper(isset($row['key']) ? $row['key'] : '')) ? true : false;
                 $fields[] = array(
-                    'field'=>$result->Field,
+                    'field'=>$row['field'],
                     'type'=>$type,
-                    'notnull'=>'NO' == strtoupper($result->Null) ? true : false,
-                    'default'=>$result->Default,
+                    'notnull'=>'NO' == strtoupper(isset($row['null']) ? $row['null'] : '') ? true : false,
+                    'default'=>array_key_exists('default', $row) ? $row['default'] : null,
                     'pk'=>$pk,
-                    'autoincremnt'=>('AUTO_INCREMENT' == strtoupper($result->Extra)) ? true : false,
+                    'autoincremnt'=>('AUTO_INCREMENT' == strtoupper(isset($row['extra']) ? $row['extra'] : '')) ? true : false,
                 );
-                if($pk) $this->tbpk = $result->Field;
+                if($pk) $this->tbpk = $row['field'];
             }
         }
         return $fields;
+    }
+
+    /**
+     * Map DB column type to int|float|string (only values safe for casting)
+     */
+    protected function normalizeFieldType($colType) {
+        $colType = strval($colType);
+        if (preg_match('/int/i', $colType)) return 'int';
+        if (preg_match('/(float|double|decimal|real|numeric)/i', $colType)) return 'float';
+        return 'string';
+    }
+
+    /**
+     * Cast insert value; keep NULL; never call settype with unknown types
+     */
+    protected function castFieldValue($value, $type) {
+        if (is_null($value)) {
+            return null;
+        }
+        $type = in_array($type, array('int', 'float', 'string'), true) ? $type : 'string';
+        if ($type === 'int') {
+            // Preserve pure digit strings (e.g. bigint) to avoid overflow on 32-bit / large IDs
+            if (is_string($value) && preg_match('/^-?\d+$/', $value)) {
+                return $value;
+            }
+            return (int)$value;
+        }
+        if ($type === 'float') {
+            return (float)$value;
+        }
+        return (string)$value;
     }
 
     /**
@@ -168,8 +200,11 @@ class BaseDAO {
         if($insertReplace) {
             $lastInsertId = $this->query("REPLACE INTO `{$this->tbname}` {$field} VALUES {$value}");
         } else {
-            $insertIgonre = isset($params['_INSERT_IGONRE']) && true === $params['_INSERT_IGONRE'] ? 'IGNORE ' : '';
-            $lastInsertId = $this->query("INSERT {$insertIgonre}INTO `{$this->tbname}` {$field} VALUES {$value}");
+            // keep typo alias _INSERT_IGONRE for backward compatibility
+            $insertIgnore = (isset($params['_INSERT_IGNORE']) && true === $params['_INSERT_IGNORE'])
+                || (isset($params['_INSERT_IGONRE']) && true === $params['_INSERT_IGONRE']);
+            $insertIgnore = $insertIgnore ? 'IGNORE ' : '';
+            $lastInsertId = $this->query("INSERT {$insertIgnore}INTO `{$this->tbname}` {$field} VALUES {$value}");
         }
         if($pkvalue) return $pkvalue;
         else{
@@ -195,12 +230,17 @@ class BaseDAO {
                 }
 
                 $value = $this->escape($params[$tbinfo['field']]);
-                settype($value, $tbinfo['type']);
+                $fieldType = isset($tbinfo['type']) ? $tbinfo['type'] : 'string';
+                // Normalize legacy/raw MySQL types (e.g. varchar(255)) before casting
+                if (!in_array($fieldType, array('int', 'float', 'string'), true)) {
+                    $fieldType = $this->normalizeFieldType($fieldType);
+                }
+                $value = $this->castFieldValue($value, $fieldType);
 
                 $valuestr .= ($fieldlen > 0 ? ',' : '');
                 if(is_null($value)) $valuestr .= 'NULL'; 
-                else if('CURRENT_TIMESTAMP' == strtoupper($value)) $valuestr .= "'".date('Y-m-d H:i:s')."'"; 
-                else if(in_array($tbinfo['type'], array('int', 'float'))) {
+                else if(is_string($value) && 'CURRENT_TIMESTAMP' == strtoupper($value)) $valuestr .= "'".date('Y-m-d H:i:s')."'"; 
+                else if(in_array($fieldType, array('int', 'float'))) {
                     $valuestr .= ('' === $value) ? (is_null($tbinfo['default']) ? (int)$value : $tbinfo['default']): $value;
                 }
                 else $valuestr .= "'".$value."'";
@@ -216,7 +256,7 @@ class BaseDAO {
      * @param  array $params
      * @return [type]         [description]
      */
-    public function change($pk=0, $params) 
+    public function change($pk=0, $params=array()) 
     {   
         $data = array(); $columns = array_column($this->tbinfo, 'field');
         foreach($params as $field=>$value) {
@@ -293,17 +333,17 @@ class BaseDAO {
             $orderByStr = "ORDER BY {$params['orderBy']}";
         }
         $limitStr = '';
-        if(preg_match('/^\d+(,\d+)*$/', $params['limit'])) {
+        if(!empty($params['limit']) && preg_match('/^\d+(,\d+)*$/', $params['limit'])) {
             $limitStr = "LIMIT {$params['limit']}";
         }
         $forceIndexStr = '';
         if(! empty($params['forceIndex'])) {
             $forceIndexStr = "FORCE INDEX({$params['forceIndex']})";
         }
-        $selectCase = $params['selectCase'] ? $params['selectCase'] : '*';
+        $selectCase = !empty($params['selectCase']) ? $params['selectCase'] : '*';
 
         $joinConds = array();
-        $params['joinConds'] = (array)$params['joinConds'];
+        $params['joinConds'] = isset($params['joinConds']) ? (array)$params['joinConds'] : array();
         if(is_array($params['joinConds']))
             foreach($params['joinConds'] as $joinCond) {
             if(preg_match('/(left|inner|right)\s*join/i', $joinCond)) $joinConds[] = $joinCond;
@@ -376,7 +416,7 @@ class BaseDAO {
                 $sql .= ' '.$this->sqlPart($field, 'nin', $params[$field.'Nin'], $prefix);
             }
         }
-        if($prefix && $params['joinWhere']) {
+        if($prefix && !empty($params['joinWhere'])) {
             // for example: [['b.id', 1], ['b.status', 'in', [1,2,3]], ['b.name', 'like', 'xiaoming']]
             if(is_array($params['joinWhere'])) {
                 foreach($params['joinWhere'] as $joinWhere) {
@@ -496,8 +536,11 @@ class BaseDAO {
 
     public function findCount($params)
     {
-        $groupbyFirstField = false !== ($pos = stripos($params['groupBy'], ',')) 
-            ? trim(substr($params['groupBy'], 0, $pos)) : $params['groupBy'];
+        $groupbyFirstField = '';
+        if (!empty($params['groupBy'])) {
+            $groupbyFirstField = false !== ($pos = stripos($params['groupBy'], ',')) 
+                ? trim(substr($params['groupBy'], 0, $pos)) : $params['groupBy'];
+        }
 
         unset($params['groupBy'], $params['limit'], $params['orderBy']);
         $params['selectCase'] = empty($groupbyFirstField) ? 'COUNT(*) AS `cnt`' : 'COUNT(DISTINCT '.$groupbyFirstField.') AS `cnt`';

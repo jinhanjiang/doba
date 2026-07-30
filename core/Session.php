@@ -63,7 +63,11 @@ class Session{
     public function setSession($callback) {
         $resp = null;
         if(is_callable($callback)) {
-            session_start(); $resp = $callback(); session_write_close();
+            if (session_status() !== PHP_SESSION_ACTIVE) {
+                session_start();
+            }
+            $resp = $callback();
+            session_write_close();
         }
         return $resp;
     }

@@ -137,14 +137,14 @@ class SQL{
                         $this->sqlite3->exec($sql);
                         if(preg_match('/^INSERT/i', $sql)) {
                             $result = $this->sqlite3->lastInsertRowID();
-                        } else if(preg_match('/^(UPDATE|DELETE|CREATE)/i', $sql) || 1 == $options['noReturn']) {}
+                        } else if(preg_match('/^(UPDATE|DELETE|CREATE)/i', $sql) || !empty($options['noReturn'])) {}
                     }
                     break;
 
                 case 2:// pdo_mysql
                     $stmt = $this->pdomysql->query($sql);
                     if(preg_match('/^INSERT/i', $sql)) $result = $this->pdomysql->lastinsertid();
-                    else if(preg_match('/^(UPDATE|DELETE)/i', $sql) || 1 == $options['noReturn']){}
+                    else if(preg_match('/^(UPDATE|DELETE)/i', $sql) || !empty($options['noReturn'])){}
                     else if(preg_match('/^(SELECT|CALL|EXPLAIN|SHOW|DESC)/i', $sql)) {
                         $stmt->setFetchMode(\PDO::FETCH_ASSOC);
                         $result = $stmt->fetchAll(\PDO::FETCH_CLASS);
@@ -154,7 +154,7 @@ class SQL{
                 case 3:// mysqli
                     if($stmt = $this->mysqli->query($sql)){
                         if(preg_match('/^INSERT/i', $sql)) $result = $this->mysqli->insert_id;
-                        else if(preg_match('/^(UPDATE|DELETE)/i', $sql) || 1 == $options['noReturn']){}
+                        else if(preg_match('/^(UPDATE|DELETE)/i', $sql) || !empty($options['noReturn'])){}
                         else if(preg_match('/^(SELECT|CALL|EXPLAIN|SHOW|DESC)/i', $sql)) {
                             $result = array();
                             while($obj = $stmt->fetch_object()) {
@@ -169,13 +169,13 @@ class SQL{
                     if($stmt = oci_parse($this->oci8, $sql)){
                         if(oci_execute($stmt)) {
                             if(preg_match('/^INSERT/i', $sql)) {
-                                if($options['sequence']) { // 
+                                if(!empty($options['sequence'])) { // 
                                     $nsql = "SELECT {$options['sequence']}.CURRVAL from dual";
                                     $objs = $this->query($nsql);
                                     $result = (int)$objs['CURRVAL'];
                                 } 
                             }
-                            else if(preg_match('/^(UPDATE|DELETE)/i', $sql) || 1 == $options['noReturn']){}
+                            else if(preg_match('/^(UPDATE|DELETE)/i', $sql) || !empty($options['noReturn'])){}
                             else if(preg_match('/^(SELECT)/i', $sql)) {
                                 $result = array();
                                 while(($row = oci_fetch_assoc($stmt)) !== false) {

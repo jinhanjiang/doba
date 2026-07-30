@@ -34,7 +34,8 @@ if(! function_exists('genI18nPage')) {
     function genI18nPage($page) { return \Config::me()->genI18nPage($page); }
 }
 if(! function_exists('errorFunction')) {
-    function errorFunction($errno, $errstr, $errfile, $errline, $errcontext) { 
+    // $errcontext removed in PHP 8.0+
+    function errorFunction($errno, $errstr, $errfile, $errline) { 
         \Config::me()->recordSysLog($errno, $errstr, $errfile, $errline, 0);
     }
 }
