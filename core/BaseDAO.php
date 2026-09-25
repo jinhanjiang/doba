@@ -36,7 +36,9 @@ class BaseDAO {
 
     public static function me(){
         $class = get_called_class();
-        if(! self::$instance[$class]) {
+        // isset() rather than a truthiness check: reading an uninitialized key raises
+        // an undefined index notice on every DAO lookup.
+        if(! isset(self::$instance[$class])) {
             self::$instance[$class] = new $class();
         }
         return self::$instance[$class];
@@ -160,7 +162,11 @@ class BaseDAO {
     public function insert($params) 
     {
         $field = $value = ""; $fieldlen = 0; $pkvalue = 0;
-        if(! is_array($params[0])) { // match: example1: ['title'=>'test1', 'status'=>1]
+        // Bail out on empty params: avoids building `INSERT INTO t () VALUES ()`.
+        if(empty($params)) return 0;
+        // A missing $params[0] means the associative form (example1) was used, so this
+        // check must use isset() - otherwise every insert raises an undefined offset.
+        if(! isset($params[0]) || ! is_array($params[0])) { // match: example1: ['title'=>'test1', 'status'=>1]
             list($fieldstr, $valuestr, $fieldlen, $pkvalue) = $this->getFieldAndValueSqlPart($params);
             $field = "(".$fieldstr.")"; $value = "(".$valuestr.")";
         } 
@@ -271,6 +277,17 @@ class BaseDAO {
                 $data[] = "`{$field}`='".$this->escape($value)."'";
             }
         }
+        // Never build SQL when no SET clause was produced: it would read
+        // `UPDATE t SET  WHERE ...`, a syntax error that MySQL raises as an exception.
+        // Reached when $params is empty, or when every field name was filtered out by
+        // the in_array() check above; logged as a warning instead of failing silently.
+        // Note $params defaults to an empty array, so a single-argument call
+        // change($conditions) lands here too.
+        if(empty($data)) {
+            trigger_error("[BaseDAO] change() has no updatable fields, skipped. Table `{$this->tbname}`"
+                . (is_array($pk) ? ' (condition array)' : ' (pk ' . var_export($pk, true) . ')'), E_USER_WARNING);
+            return is_array($pk) ? 0 : $pk;
+        }
         $setConds = implode(',', $data);
 
         $where = ''; $id = 0;
@@ -278,7 +295,9 @@ class BaseDAO {
             $sql = $this->where($pk);
             $where = $sql ? "WHERE ".$sql : '';
         } else {
-            $where = "WHERE `{$this->tbpk}`='{$pk}'"; $id = $pk;
+            // The primary key must be escaped: the original code interpolated $pk straight
+            // into the SQL, which is an injection point when it comes from request input.
+            $where = "WHERE `{$this->tbpk}`='".$this->escape($pk)."'"; $id = $pk;
         }
         $this->query("UPDATE `{$this->tbname}` SET {$setConds} {$where}");
         return $id;
@@ -303,7 +322,8 @@ class BaseDAO {
             $sql = $this->where($pk);
             $where = $sql ? "WHERE ".$sql : '';
         } else {
-            $where = "WHERE `{$this->tbpk}`='{$pk}'";
+            // The primary key must be escaped, for the same reason as change().
+            $where = "WHERE `{$this->tbpk}`='".$this->escape($pk)."'";
         }
         $this->query("DELETE FROM `{$this->tbname}` {$where}");
     }
@@ -381,14 +401,23 @@ class BaseDAO {
                 $value = $params[$field];
                 if(is_array($value))
                 {
-                    if(isset($value['value']) && is_scalar($value['value']) && '' !== $value['value'])
+                    $op = isset($value['op']) ? $value['op'] : 'eq';
+                    $nvalue = isset($value['value']) ? $value['value'] : null;
+                    if($this->isAcceptableValue($op, $nvalue))
                     {
                         // array('and'=>false, 'op'=>'=', 'value'=>'')
                         // op: [eq =], [geq, >=], [gt, >], [leq, <=], [lt, <], [<>, !=, neq], 
                         //     [in, nin(not in)] ,[like, llike, rlike], [custom, raw]
-                        $nvalue = $value['value']; $op = $value['op'];
                         $andOr = isset($value['and']) && false === $value['and'] ? 'OR' : 'AND';
                         $sql .= ' '.$this->sqlPart($field, $op, $nvalue, $prefix, $andOr);
+                    }
+                    else
+                    {
+                        // This used to skip the condition silently: it vanished and the query
+                        // matched a wider set than intended, leaving no clue when something went
+                        // wrong (passing an array to `in` was broken this way for a long time).
+                        // Log it to the system log instead.
+                        $this->logIgnoredCondition($field, $op, $nvalue);
                     }
                 }
                 else if(is_scalar($value) && '' !== $value) {
@@ -411,9 +440,22 @@ class BaseDAO {
             } if(isset($params[$field.'Neq']) && '' !== $params[$field.'Neq']) {
                 $sql .= ' '.$this->sqlPart($field, 'neq', $params[$field.'Neq'], $prefix);
             } if(isset($params[$field.'In']) && ! is_null($params[$field.'In'])) {
-                $sql .= ' '.$this->sqlPart($field, 'in', $params[$field.'In'], $prefix);
+                if(is_array($params[$field.'In']) && empty($params[$field.'In'])) {
+                    // An empty IN set means "match nothing". It used to emit `IN ('')`, which
+                    // MySQL treats as 0 and therefore matched rows with id/status = 0 by
+                    // accident. Emit an explicit false rather than silently widening the result.
+                    $this->logIgnoredCondition($field.'In', 'in', $params[$field.'In']);
+                    $sql .= ' AND 1=0';
+                } else {
+                    $sql .= ' '.$this->sqlPart($field, 'in', $params[$field.'In'], $prefix);
+                }
             } if(isset($params[$field.'Nin']) && ! is_null($params[$field.'Nin'])) {
-                $sql .= ' '.$this->sqlPart($field, 'nin', $params[$field.'Nin'], $prefix);
+                if(is_array($params[$field.'Nin']) && empty($params[$field.'Nin'])) {
+                    // An empty NOT IN set means "match everything", so skip the condition.
+                    $this->logIgnoredCondition($field.'Nin', 'nin', $params[$field.'Nin']);
+                } else {
+                    $sql .= ' '.$this->sqlPart($field, 'nin', $params[$field.'Nin'], $prefix);
+                }
             }
         }
         if($prefix && !empty($params['joinWhere'])) {
@@ -441,6 +483,59 @@ class BaseDAO {
             }
         }
         return preg_replace('/^\s*(and|or)/i', '', $sql);
+    }
+
+    /**
+     * Build the value list for IN / NOT IN
+     *
+     * Each element is quoted on its own. The original implementation only looked at
+     * $value[0], so `[0, 'abc']` was treated as an integer list and 'abc' was cast to 0
+     * - a silently wrong query. Numbers stay unquoted, everything else is escaped.
+     */
+    protected function inList($values)
+    {
+        return implode(',', array_map(function($v) {
+            if(is_int($v) || is_float($v)) return $v;
+            if(is_null($v)) return 'NULL';
+            if(is_bool($v)) return $v ? 1 : 0;
+            return "'".$this->escape($v)."'";
+        }, $values));
+    }
+
+    /**
+     * Whether an operator accepts the given value type
+     *
+     * Only in / nin accept arrays (and never an empty one - an empty array produces
+     * `IN ()`, which is a syntax error). Every other operator takes a non-empty scalar
+     * only: feeding an array to eq/gt/like just builds broken SQL.
+     *
+     * @param string $op    operator (case insensitive)
+     * @param mixed  $value value about to be written
+     * @return bool
+     */
+    protected function isAcceptableValue($op, $value)
+    {
+        if(in_array(strtolower($op), array('in', 'nin', 'not in'), true)) {
+            return is_array($value) && ! empty($value);
+        }
+        return is_scalar($value) && '' !== $value;
+    }
+
+    /**
+     * Log a condition that was dropped
+     *
+     * These used to fail completely silently - the condition disappeared and the query
+     * matched a wider set, leaving no trace to debug from. E_USER_WARNING is used
+     * because recordSysLog only records WARNING and above by default
+     * (DEBUG_ERROR=error); NOTICE entries never reach the log file.
+     */
+    protected function logIgnoredCondition($field, $op, $value)
+    {
+        $type = is_array($value) ? 'array(' . count($value) . ')' : gettype($value);
+        trigger_error(
+            "[BaseDAO] condition on `{$field}` ignored: op={$op} does not accept a {$type} value",
+            E_USER_WARNING
+        );
     }
 
     /**
@@ -505,20 +600,12 @@ class BaseDAO {
                 }
                 break; 
             case 'in':
-                if(is_array($value)) {
-                    $value = is_int($value[0]) 
-                        ? implode(",", array_map(function($data){ return (int)$data; }, $value)) 
-                        : "'".implode("','", $this->escape($value))."'";
-                }
+                if(is_array($value)) $value = $this->inList($value);
                 $sql = "{$field} IN ($value)";
                 break;
             case 'nin':
             case 'not in':
-                if(is_array($value)) {
-                    $value = is_int($value[0]) 
-                        ? implode(",", array_map(function($data){ return (int)$data; }, $value)) 
-                        : "'".implode("','", $this->escape($value))."'";
-                }
+                if(is_array($value)) $value = $this->inList($value);
                 $sql = "{$field} NOT IN ($value)";
                 break;
             case 'like':

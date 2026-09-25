@@ -60,7 +60,7 @@ class SQL{
             $initExec = ($init ? preg_replace('/;$/', '', $init).';' : '') .'SET NAMES '.$charset.';';
             if (extension_loaded('pdo_mysql'))
             {
-                $pdoConfigs = is_array($configs['pdoConfigs']) ? $configs['pdoConfigs'] : array();
+                $pdoConfigs = isset($configs['pdoConfigs']) && is_array($configs['pdoConfigs']) ? $configs['pdoConfigs'] : array();
                 $this->link = 2;
                 $this->pdomysql = $this->pdomysql ? $this->pdomysql : new \PDO(
                     "mysql:host={$configs['dbHost']};port={$port};dbname={$configs['dbName']}",

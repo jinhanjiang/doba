@@ -117,7 +117,10 @@ class BaseConfig
 
     public function getDb($key='default', $option=array()) {
         $reconnect = isset($option['reconnect']) && true === $option['reconnect'] ? true : false;
-        if(! $GLOBALS[$key.'db'] || $reconnect) {
+        // empty() has the same truthiness as !$GLOBALS[...] but does not raise an
+        // undefined index when $GLOBALS['{key}db'] has not been created yet
+        // (BaseDAO always passes through here during construction).
+        if(empty($GLOBALS[$key.'db']) || $reconnect) {
             $dbConfigs = $this->getDbConfigs();
             $dbConfig = isset($dbConfigs[$key]) ? $dbConfigs[$key] : array();
             if(! $dbConfig) throw new \Exception('['.$key.'] database connection configuration not found');
