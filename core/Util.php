@@ -267,28 +267,108 @@ HTML;
 
     /**
      * Get client IP
-     * Prefer REMOTE_ADDR; only trust X-Forwarded-For / X-Real-IP when TRUST_PROXY is enabled
+     *
+     * The legacy behaviour is kept by default: proxy headers are used when
+     * present.  Set Constant::setConstant('TRUST_PROXY', false) to ignore them
+     * when the application is exposed directly to the internet, or true to
+     * always trust them (e.g. a proxy with a public address).
+     *
+     * Order: X-Forwarded-For, X-Real-IP, Client-IP, REMOTE_ADDR.
+     * Every candidate is validated; values like "unknown" are skipped.
      */
     static public function getIp() 
     {   
-        $remote = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '';
         $trustProxy = Constant::getConstant('TRUST_PROXY');
-        if ($trustProxy) {
-            if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-                $ip = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-                $ip = trim(current($ip));
-                if (filter_var($ip, FILTER_VALIDATE_IP)) {
-                    return $ip;
-                }
-            }
-            if (!empty($_SERVER['HTTP_CLIENT_IP']) && filter_var($_SERVER['HTTP_CLIENT_IP'], FILTER_VALIDATE_IP)) {
-                return $_SERVER['HTTP_CLIENT_IP'];
+        // null (not configured) keeps the old, proxy-aware behaviour.
+        $trustHeaders = (null === $trustProxy) ? true : (bool)$trustProxy;
+
+        if ($trustHeaders) {
+            $ip = self::firstValidIp(self::serverValue('HTTP_X_FORWARDED_FOR'));
+            if ('' !== $ip) return $ip;
+
+            $ip = self::normalizeIp(self::serverValue('HTTP_X_REAL_IP'));
+            if ('' !== $ip) return $ip;
+
+            $ip = self::normalizeIp(self::serverValue('HTTP_CLIENT_IP'));
+            if ('' !== $ip) return $ip;
+        }
+
+        $ip = self::normalizeIp(self::serverValue('REMOTE_ADDR'));
+        if ('' !== $ip) return $ip;
+
+        // Some SAPIs only expose these through the process environment.
+        if ($trustHeaders) {
+            foreach (array('HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'HTTP_CLIENT_IP') as $name) {
+                $value = getenv($name);
+                if (false === $value || '' === trim($value)) continue;
+                $ip = ('HTTP_X_FORWARDED_FOR' === $name)
+                    ? self::firstValidIp($value) : self::normalizeIp($value);
+                if ('' !== $ip) return $ip;
             }
         }
-        if ($remote && filter_var($remote, FILTER_VALIDATE_IP)) {
-            return $remote;
+        $value = getenv('REMOTE_ADDR');
+        if (false !== $value) {
+            $ip = self::normalizeIp($value);
+            if ('' !== $ip) return $ip;
         }
         return 'Unknown'; 
+    }
+
+    private static function serverValue($name) {
+        return isset($_SERVER[$name]) ? $_SERVER[$name] : '';
+    }
+
+    /**
+     * First valid IP of a comma separated X-Forwarded-For style header.
+     */
+    private static function firstValidIp($header) {
+        if (!is_string($header) || '' === trim($header)) return '';
+
+        $parts = explode(',', $header);
+        // Never walk an unbounded, client controlled header.
+        if (count($parts) > 50) $parts = array_slice($parts, 0, 50);
+        foreach ($parts as $part) {
+            $ip = self::normalizeIp($part);
+            if ('' !== $ip) return $ip;
+        }
+        return '';
+    }
+
+    /**
+     * Validate one IP and strip a port / IPv4-mapped IPv6 prefix.
+     * Returns '' when it is not a valid IPv4/IPv6 address.
+     */
+    private static function normalizeIp($value) {
+        if (!is_string($value)) return '';
+
+        $value = trim($value);
+        if ('' === $value || 0 === strcasecmp($value, 'unknown')) return '';
+        $value = trim($value, " \t\n\r\0\x0B\"'");
+        if ('' === $value) return '';
+
+        if ('[' === $value[0]) {
+            // [2001:db8::1]:443
+            $end = strpos($value, ']');
+            if (false !== $end) $value = substr($value, 1, $end - 1);
+        } else if (1 === substr_count($value, ':')) {
+            // 203.0.113.10:5678
+            $parts = explode(':', $value);
+            if (2 === count($parts) && ctype_digit($parts[1])
+                && false !== filter_var($parts[0], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $value = $parts[0];
+            }
+        }
+
+        if (false === filter_var($value, FILTER_VALIDATE_IP)) return '';
+
+        // Return IPv4-mapped IPv6 addresses in their IPv4 form.
+        if (0 === stripos($value, '::ffff:')) {
+            $v4 = substr($value, 7);
+            if (false !== filter_var($v4, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                return $v4;
+            }
+        }
+        return $value;
     }
 
     /**
